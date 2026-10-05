@@ -225,6 +225,8 @@ module.exports = function elixirHome() {
         uploadExts: fileUtility.getSuppotredExtensions().filter((ext) => fileUtility.getFormatActions(ext).length),
         convertExts: fileUtility.getConvertExtensions(),
         maxFileSize: configServer.get('maxFileSize'),
+        // the editor warm-up (home.js) reads the versioned static path from api.js
+        apiUrl: configServer.get('siteUrl') + configServer.get('apiUrl'),
       });
     } catch (ex) {
       console.log(ex);

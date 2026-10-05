@@ -440,5 +440,99 @@
     if (document.visibilityState === 'visible') refreshFiles();
   });
 
+  // ---------- editor warm-up ----------
+  // Files open in a new tab whose editor downloads ~6 MB of compressed code and fonts before
+  // the document shows. Fetch them into the HTTP cache while the user is on this page (when
+  // idle, or at once when a Word file or tile is pointed at): the editor then starts warm.
+  // Static files are served under a versioned path (/<version>-<hash>/...) with immutable
+  // caching; api.js, which is never cached, carries that path.
+  var WARM = {
+    word: [
+      'web-apps/vendor/requirejs/require.js',
+      'web-apps/apps/documenteditor/main/app.js',
+      'web-apps/apps/documenteditor/main/app.css',
+      'web-apps/vendor/jquery/jquery.min.js',
+      'web-apps/vendor/xregexp/xregexp-all-min.js',
+      'web-apps/vendor/socketio/socket.io.min.js',
+      'sdkjs/common/AllFonts.js',
+      'sdkjs/word/sdk-all-min.js',
+      'sdkjs/word/sdk-all.js',
+      'sdkjs/common/libfont/engine/fonts.js',
+      'sdkjs/common/libfont/engine/fonts.wasm',
+      'sdkjs/common/Charts/ChartStyles.js',
+      'sdkjs/common/Images/cursors/svg.json',
+      'sdkjs/common/Images/fonts_thumbnail.png.bin',
+      'web-apps/apps/documenteditor/main/locale/' + (data.lang.editor || 'en') + '.json',
+      'web-apps/apps/documenteditor/main/code.js',
+    ],
+  };
+  // fonts the Word editor always loads (its defaults and their metric-compatible substitutes)
+  var WARM_FONTS = ['Liberation Sans', 'Liberation Serif', 'Liberation Mono', 'OpenSymbol', 'Open Sans', 'Carlito', 'Caladea'];
+  var warmed = {};
+  var warmRoot = null; // Promise of "<site root>/<version>-<hash>/"
+
+  var prefetch = function (url) {
+    var link = document.createElement('link');
+    link.rel = 'prefetch';
+    link.href = url;
+    document.head.appendChild(link);
+  };
+  var versionRoot = function () {
+    if (!warmRoot) {
+      warmRoot = fetch(data.apiUrl, { cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.text() : ''; })
+        .then(function (src) {
+          var ver = /const ver = '(\/[^'{]+)'/.exec(src);
+          if (!ver) throw new Error('no version in api.js');
+          return data.apiUrl.replace(/web-apps\/apps\/api\/documents\/api\.js.*$/, '').replace(/\/$/, '') + ver[1] + '/';
+        });
+      warmRoot.catch(function () { warmRoot = null; });
+    }
+    return warmRoot;
+  };
+  var warmFonts = function (root) {
+    return fetch(root + 'sdkjs/common/AllFonts.js').then(function (r) { return r.text(); }).then(function (src) {
+      var files = /__fonts_files"\]\s*=\s*(\[[^\]]*\])/.exec(src);
+      var infos = /__fonts_infos"\]\s*=\s*(\[[\s\S]*?\]\s*\]);/.exec(src);
+      if (!files || !infos) return;
+      files = JSON.parse(files[1]);
+      JSON.parse(infos[1]).forEach(function (info) {
+        if (WARM_FONTS.indexOf(info[0]) < 0) return;
+        [info[1], info[3], info[5], info[7]].forEach(function (i) { if (i >= 0 && files[i]) prefetch(root + 'fonts/' + files[i]); });
+      });
+    });
+  };
+  var warmUp = function (type) {
+    if (warmed[type] || !WARM[type] || !data.apiUrl || !window.fetch) return;
+    var c = navigator.connection;
+    if (c && (c.saveData || /2g|3g/.test(c.effectiveType || ''))) return;
+    warmed[type] = true;
+    versionRoot().then(function (root) {
+      WARM[type].forEach(function (p) { prefetch(root + p); });
+      return warmFonts(root);
+    }).catch(function () { warmed[type] = false; });
+  };
+  var docTypeOf = function (name) {
+    for (var i = 0; i < state.files.length; i++) if (state.files[i].name === name) return state.files[i].documentType;
+    return null;
+  };
+  var typeOfTarget = function (el) {
+    if (!el || !el.closest) return null;
+    var tr = el.closest('#files-body tr');
+    if (tr && tr.dataset.name) return docTypeOf(tr.dataset.name);
+    var tile = el.closest('.tile');
+    return tile ? tile.dataset.type : null;
+  };
+  ['pointerover', 'focusin', 'pointerdown'].forEach(function (ev) {
+    document.addEventListener(ev, function (e) {
+      var type = typeOfTarget(e.target);
+      if (type) warmUp(type);
+    }, { passive: true });
+  });
+  window.addEventListener('load', function () {
+    var idle = window.requestIdleCallback || function (fn) { return setTimeout(fn, 1500); };
+    setTimeout(function () { idle(function () { warmUp('word'); }, { timeout: 4000 }); }, 1000);
+  });
+
   onHash();
 }());
