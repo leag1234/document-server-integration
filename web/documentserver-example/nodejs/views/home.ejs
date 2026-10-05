@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="<%= lang.ui %>">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <!--
+    *
+    * (c) Copyright ElixirOffice contributors 2026
+    *
+    * Licensed under the Apache License, Version 2.0 (the "License");
+    * you may not use this file except in compliance with the License.
+    * You may obtain a copy of the License at
+    *
+    *     http://www.apache.org/licenses/LICENSE-2.0
+    *
+    * Unless required by applicable law or agreed to in writing, software
+    * distributed under the License is distributed on an "AS IS" BASIS,
+    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    * See the License for the specific language governing permissions and
+    * limitations under the License.
+    *
+    * Icons: Fluent UI System Icons, (c) Microsoft Corporation, MIT License
+    * (public/elixir/fluent/LICENSE).
+    *
+    -->
+    <title><%= appName %></title>
+    <% if (hasFavicon) { %><link rel="icon" href="elixir/brand/favicon.svg" type="image/svg+xml" /><% } %>
+    <link rel="stylesheet" href="elixir/home.css" />
+</head>
+<%
+  const types = ['word', 'cell', 'slide', 'pdf'];
+  const blankExt = { word: 'docx', cell: 'xlsx', slide: 'pptx', pdf: 'pdf' };
+  const langParam = '&lang=' + encodeURIComponent(lang.editor);
+  const initials = (user.name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('');
+%>
+<body>
+    <a class="skip-link" href="#main"><%= t('skipToContent') %></a>
+    <%- iconSprite %>
+    <header class="topbar">
+        <a class="brand" href="./" aria-label="<%= appName %> &ndash; <%= t('nav.home') %>">
+            <% if (hasLogo) { %>
+                <img src="elixir/brand/logo.svg" alt="<%= appName %>" width="135" height="26" />
+            <% } else { %>
+                <span class="brand-text"><%= appName %></span>
+            <% } %>
+        </a>
+        <div class="search" role="search">
+            <svg class="search-icon" aria-hidden="true"><use href="#i-search"/></svg>
+            <input type="search" id="search" autocomplete="off" spellcheck="false"
+                placeholder="<%= t('search.placeholder') %>" aria-label="<%= t('search.label') %>" />
+            <kbd class="search-kbd" aria-hidden="true">/</kbd>
+        </div>
+        <div class="account" title="<%= t('account.label', { name: user.name }) %>">
+            <span class="avatar" aria-label="<%= t('account.label', { name: user.name }) %>"><%= initials %></span>
+        </div>
+    </header>
+
+    <div class="layout">
+        <nav class="rail" aria-label="<%= t('nav.label') %>">
+            <a class="rail-item" href="#home" data-view="home">
+                <svg class="ic ic-r" aria-hidden="true"><use href="#i-home"/></svg>
+                <svg class="ic ic-f" aria-hidden="true"><use href="#i-home-f"/></svg>
+                <span><%= t('nav.home') %></span>
+            </a>
+            <a class="rail-item" href="#new" data-view="new">
+                <svg class="ic ic-r" aria-hidden="true"><use href="#i-add"/></svg>
+                <svg class="ic ic-f" aria-hidden="true"><use href="#i-add-f"/></svg>
+                <span><%= t('nav.new') %></span>
+            </a>
+            <a class="rail-item" href="#open" data-view="open">
+                <svg class="ic ic-r" aria-hidden="true"><use href="#i-open"/></svg>
+                <svg class="ic ic-f" aria-hidden="true"><use href="#i-open-f"/></svg>
+                <span><%= t('nav.open') %></span>
+            </a>
+            <div class="rail-sep" role="separator"></div>
+            <% types.forEach((type) => { %>
+                <a class="rail-item rail-app" href="#<%= type %>" data-view="<%= type %>" data-type="<%= type %>">
+                    <svg class="ic ic-r t-<%= type %>" aria-hidden="true"><use href="#i-<%= type %>"/></svg>
+                    <svg class="ic ic-f t-<%= type %>" aria-hidden="true"><use href="#i-<%= type %>-f"/></svg>
+                    <span><%= t('app.' + type) %></span>
+                </a>
+            <% }) %>
+            <div class="rail-fill"></div>
+            <a class="rail-item rail-dev" href="?dev=1" title="<%= t('dev.title') %>">
+                <svg class="ic" aria-hidden="true"><use href="#i-wrench"/></svg>
+                <span><%= t('dev.label') %></span>
+            </a>
+        </nav>
+
+        <main id="main" tabindex="-1">
+            <section class="start" id="start" aria-labelledby="start-title">
+                <h1 class="section-title" id="start-title"><%= t('home.startNew') %></h1>
+                <div class="tiles" id="tiles">
+                    <% types.forEach((type) => { %>
+                        <a class="tile tile-blank" data-type="<%= type %>" data-blank="1" target="_blank"
+                            href="editor?fileExt=<%= blankExt[type] %><%= langParam %>">
+                            <span class="thumb thumb-<%= type %>" aria-hidden="true"><span class="sheet"></span></span>
+                            <span class="tile-label"><%= t('tile.blank.' + type) %></span>
+                        </a>
+                    <% }) %>
+                    <% templates.forEach((tpl) => { %>
+                        <a class="tile tile-template" data-type="<%= tpl.documentType %>" target="_blank"
+                            href="elixir/new?template=<%= encodeURIComponent(tpl.id) %><%= langParam %>">
+                            <span class="thumb thumb-image" aria-hidden="true">
+                                <% if (tpl.thumb) { %><img src="<%= tpl.thumb %>" alt="" loading="lazy" decoding="async" /><% } %>
+                                <svg class="thumb-badge t-<%= tpl.documentType %>"><use href="#i-<%= tpl.documentType %>-f"/></svg>
+                            </span>
+                            <span class="tile-label"><%= tpl.title %></span>
+                        </a>
+                    <% }) %>
+                </div>
+            </section>
+
+            <section class="open-panel" id="open-panel" aria-labelledby="open-title" hidden>
+                <h1 class="section-title" id="open-title"><%= t('open.title') %></h1>
+                <label class="dropzone" id="dropzone" for="file-input">
+                    <svg class="dropzone-icon" aria-hidden="true"><use href="#i-upload"/></svg>
+                    <span class="dropzone-title"><%= t('open.drop') %></span>
+                    <span class="dropzone-or"><%= t('open.or') %></span>
+                    <span class="btn btn-primary"><%= t('open.browse') %></span>
+                    <span class="dropzone-hint"><%= t('open.hint') %></span>
+                </label>
+            </section>
+
+            <section class="recent" id="recent" aria-labelledby="recent-title">
+                <div class="recent-head">
+                    <h2 class="section-title" id="recent-title"><%= t('recent.title') %></h2>
+                    <div class="chips" id="chips" role="group" aria-label="<%= t('filter.label') %>">
+                        <button type="button" class="chip" data-filter="" aria-pressed="true"><%= t('filter.all') %></button>
+                        <% types.forEach((type) => { %>
+                            <button type="button" class="chip" data-filter="<%= type %>" aria-pressed="false"><%= t('filter.' + type) %></button>
+                        <% }) %>
+                    </div>
+                    <span class="recent-fill"></span>
+                    <label class="btn btn-subtle" id="upload-button" for="file-input">
+                        <svg class="ic-sm" aria-hidden="true"><use href="#i-upload"/></svg>
+                        <span><%= t('upload.button') %></span>
+                    </label>
+                </div>
+                <table class="files" id="files">
+                    <thead>
+                        <tr>
+                            <th class="c-icon" scope="col"><span class="visually-hidden"><%= t('col.name') %></span></th>
+                            <th class="c-name" scope="col"><%= t('col.name') %></th>
+                            <th class="c-mod" scope="col"><%= t('col.modified') %></th>
+                            <th class="c-size" scope="col"><%= t('col.size') %></th>
+                            <th class="c-act" scope="col"><span class="visually-hidden"><%= t('col.actions') %></span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="files-body"></tbody>
+                </table>
+                <div class="empty" id="empty" hidden>
+                    <svg class="empty-icon" aria-hidden="true"><use href="#i-file"/></svg>
+                    <p class="empty-title"><%= t('empty.title') %></p>
+                    <p class="empty-body"><%= t('empty.body') %></p>
+                </div>
+                <p class="no-match" id="no-match" hidden></p>
+            </section>
+        </main>
+    </div>
+
+    <input type="file" id="file-input" class="visually-hidden" tabindex="-1"
+        accept="<%= uploadExts.map((e) => '.' + e).join(',') %>" />
+
+    <div class="menu" id="menu" role="menu" hidden>
+        <button type="button" role="menuitem" data-action="open">
+            <svg class="ic-sm" aria-hidden="true"><use href="#i-new-tab"/></svg><span><%= t('action.open') %></span>
+        </button>
+        <button type="button" role="menuitem" data-action="download">
+            <svg class="ic-sm" aria-hidden="true"><use href="#i-download"/></svg><span><%= t('action.download') %></span>
+        </button>
+        <div class="menu-sep" role="separator"></div>
+        <button type="button" role="menuitem" data-action="delete" class="danger">
+            <svg class="ic-sm" aria-hidden="true"><use href="#i-delete"/></svg><span><%= t('action.delete') %></span>
+        </button>
+    </div>
+
+    <dialog class="dialog" id="confirm" aria-labelledby="confirm-title">
+        <form method="dialog">
+            <h2 id="confirm-title"><%= t('delete.title') %></h2>
+            <p id="confirm-body"></p>
+            <div class="dialog-actions">
+                <button class="btn btn-danger" value="ok"><%= t('action.delete') %></button>
+                <button class="btn" value="cancel" autofocus><%= t('action.cancel') %></button>
+            </div>
+        </form>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden>
+        <span class="toast-spinner" aria-hidden="true"></span>
+        <span class="toast-text" id="toast-text"></span>
+        <a class="toast-link" id="toast-link" target="_blank" hidden></a>
+        <button type="button" class="icon-btn toast-close" id="toast-close" aria-label="<%= t('toast.close') %>">
+            <svg class="ic-sm" aria-hidden="true"><use href="#i-dismiss"/></svg>
+        </button>
+    </div>
+
+    <div class="drop-overlay" id="drop-overlay" hidden>
+        <div class="drop-overlay-box">
+            <svg aria-hidden="true"><use href="#i-upload"/></svg>
+            <span><%= t('upload.dropOverlay') %></span>
+        </div>
+    </div>
+
+    <script id="home-data" type="application/json"><%- JSON.stringify({
+        lang,
+        strings,
+        files,
+        uploadExts,
+        convertExts,
+        maxFileSize,
+        startTitles: {
+            home: t('home.startNew'),
+            new: t('new.title'),
+            word: t('app.word.title'),
+            cell: t('app.cell.title'),
+            slide: t('app.slide.title'),
+            pdf: t('app.pdf.title'),
+        },
+    }).replace(/</g, '\\u003c') %></script>
+    <script src="elixir/home.js"></script>
+</body>
+</html>

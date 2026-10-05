@@ -35,6 +35,7 @@ const documentService = require('./helpers/documentService');
 const fileUtility = require('./helpers/fileUtility');
 const wopiApp = require('./helpers/wopi/wopiRouting');
 const users = require('./helpers/users');
+const elixirHome = require('./helpers/elixirHome');
 const dataAutofill = require('./config/data.json');
 
 const configServer = config.get('server');
@@ -91,6 +92,8 @@ app.use(favicon(`${__dirname}/public/images/favicon.ico`)); // use favicon
 
 app.use(bodyParser.json()); // connect middleware that parses json
 app.use(bodyParser.urlencoded({ extended: false })); // connect middleware that parses urlencoded bodies
+
+app.use(elixirHome()); // ElixirOffice start page; the test harness below stays at /?dev=1
 
 app.get('/', (req, res) => { // define a handler for default page
   try {
