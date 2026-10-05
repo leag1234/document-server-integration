@@ -75,5 +75,6 @@
   "time.justNow": "À l’instant",
   "time.today": "Aujourd’hui, {time}",
   "time.yesterday": "Hier, {time}",
-  "toast.close": "Fermer"
+  "toast.close": "Fermer",
+  "storage.name": "Mes fichiers"
 }

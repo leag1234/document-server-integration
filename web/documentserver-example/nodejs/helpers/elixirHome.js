@@ -148,6 +148,48 @@ const listFiles = (docManager) => docManager.getStoredFiles().map((file) => {
   };
 }).sort((a, b) => b.time - a.time);
 
+// Editor configuration for the ElixirOffice backstage (File menu): the start
+// page templates of the same document type, the recent files and the host URLs
+// used by the Open, Share and title bar pages (editorConfig.elixir).
+const editorExtras = (docManager, req, fileName) => {
+  const lang = resolveLanguage(req);
+  const t = translator(lang.ui);
+  const server = docManager.getServerUrl();
+  const documentType = fileUtility.getFileType(fileName);
+  const userParam = req.query.userid ? `&userid=${encodeURIComponent(req.query.userid)}` : '';
+  const editorUrl = (name) => `${server}/editor?fileName=${encodeURIComponent(name)}${userParam}`;
+  const templates = loadTemplates().filter((tpl) => fileUtility.getFileType(tpl.file) === documentType)
+    .map((tpl) => ({
+      title: localized(tpl.title, lang.ui),
+      image: tpl.thumb && fileSystem.existsSync(path.join(templatesDir, tpl.thumb))
+        ? `${server}/elixir/brand/templates/${encodeURIComponent(tpl.thumb)}` : '',
+      url: `${server}/elixir/new?template=${encodeURIComponent(tpl.id)}&lang=${encodeURIComponent(lang.ui)}${userParam}`,
+    }));
+  const folder = t('storage.name');
+  const recent = listFiles(docManager).filter((file) => file.name !== fileName).slice(0, 30)
+    .map((file) => ({
+      title: file.name,
+      url: editorUrl(file.name),
+      folder: folder !== 'storage.name' ? folder : configServer.get('appName'),
+      modified: new Date(file.time).toISOString(),
+      size: file.size,
+    }));
+  return {
+    templates: templates.length ? templates : null,
+    recent,
+    elixir: {
+      homeUrl: `${server}/`,
+      openUrl: `${server}/#open`,
+      uploadUrl: `${server}/upload`,
+      editorUrl: editorUrl('{name}').replace(encodeURIComponent('{name}'), '{name}'),
+      shareUrl: editorUrl(fileName),
+      folder: folder !== 'storage.name' ? folder : configServer.get('appName'),
+      uploadExts: fileUtility.getSuppotredExtensions().filter((ext) => fileUtility.getFormatActions(ext).length
+        && fileUtility.getConvertExtensions().indexOf(ext) === -1),
+    },
+  };
+};
+
 module.exports = function elixirHome() {
   const router = express.Router();
 
@@ -229,3 +271,5 @@ module.exports = function elixirHome() {
 
   return router;
 };
+
+module.exports.editorExtras = editorExtras;
