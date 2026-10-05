@@ -1256,6 +1256,9 @@ app.get('/editor', (req, res) => { // define a handler for editing document
       pluginsConfig = plugins;
     }
 
+    // ElixirOffice backstage: start page templates, recent files, host URLs
+    const elixirExtras = elixirHome.editorExtras(req.DocManager, req, fileName);
+
     // file config data
     const argss = {
       appName,
@@ -1276,7 +1279,9 @@ app.get('/editor', (req, res) => { // define a handler for editing document
         token: '',
         callbackUrl: req.DocManager.getCallback(fileName),
         createUrl: userid !== 'uid-0' ? createUrl : null,
-        templates: user.templates ? templates : null,
+        templates: user.templates ? (elixirExtras.templates || templates) : null,
+        recent: elixirExtras.recent,
+        elixir: elixirExtras.elixir,
         isEdit: canEdit && (mode === 'edit' || mode === 'view' || mode === 'filter' || mode === 'blockcontent'),
         review: canEdit && (mode === 'edit' || mode === 'review'),
         chat: userid !== 'uid-0',
