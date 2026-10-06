@@ -305,8 +305,10 @@ const addNotice = (hash, notice) => session.update(hash, (data) => {
   data.notices = (data.notices || []).concat([{ ...notice, at: Date.now() }]).slice(-20);
 });
 
-// state of Nextcloud files open in the document server, per server+fileid:
-// { key, etag, path per session, sessions } (shared by co-editors)
+// editing sessions of Nextcloud files in the document server, per document key:
+// { ref (server+fileid), etag, path per browser session } (shared by co-editors).
+// Keyed by document key, not by file: a late callback of a closed editing session
+// (e.g. one that ended in a conflict copy) never touches a newer session of the file.
 const STATE = 'nc-open';
 const fileRef = (nc, fileid) => crypto.createHash('sha256').update(`${nc.server}\n${fileid}`).digest('hex');
 const pruneState = (st) => {
@@ -315,21 +317,20 @@ const pruneState = (st) => {
   return st;
 };
 
-// key of the editing session of this file: reused while the file is open,
-// new when the file changed on the Nextcloud side since our last save
+// key of the editing session of this file: the open session whose file version
+// (ETag) is the current one, else a new key for this version
 const documentKey = (nc, item, sessionHash) => {
   const st = pruneState(session.loadState(STATE));
   const ref = fileRef(nc, item.fileid);
-  let entry = st[ref];
-  if (!entry || entry.etag !== item.etag) {
-    const key = `nc${crypto.createHash('sha256').update(`${ref}\n${item.etag}`).digest('hex').slice(0, 32)}`;
-    entry = { key, etag: item.etag, sessions: {}, server: nc.server, fileid: item.fileid };
+  let key = Object.keys(st).find((k) => st[k].ref === ref && st[k].etag === item.etag);
+  if (!key) {
+    key = `nc${crypto.createHash('sha256').update(`${ref}\n${item.etag}`).digest('hex').slice(0, 32)}`;
+    st[key] = { ref, etag: item.etag, sessions: {}, server: nc.server, fileid: item.fileid };
   }
-  entry.sessions[sessionHash] = item.path;
-  entry.updated = Date.now();
-  st[ref] = entry;
+  st[key].sessions[sessionHash] = item.path;
+  st[key].updated = Date.now();
   session.saveState(STATE, st);
-  return { key: entry.key, ref };
+  return { key, ref: key };
 };
 
 // ---------------------------------------------------------------- document server side
