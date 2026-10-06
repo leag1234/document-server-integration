@@ -23,7 +23,7 @@
     * limitations under the License.
     *
     -->
-    <title><%- file.name %> - <%= appName %></title>
+    <title><%= file.name %> - <%= appName %></title>
     <link rel="icon"
         href="images/<%- editor.documentType %>.ico"
         type="image/x-icon" />
@@ -456,20 +456,25 @@
             "onRequestOpen": onRequestOpen,
         };
 
+        // ElixirOffice: files from another storage (Nextcloud) have no local history,
+        // rename, "save copy" or reference sources in the example's storage
+        var externalStorage = <%- JSON.stringify(!!editor.external) %>;
         if (<%- JSON.stringify(editor.userid) %> != null) {
             config.events.onRequestClose = onRequestClose;
             config.events.onRequestEditRights = onRequestEditRights;
+            config.events.onRequestUsers = onRequestUsers;
+            config.events.onRequestSendNotify = onRequestSendNotify;
+            config.events.onRequestStartFilling = onRequestStartFilling;
+            config.events.onStartFilling = onStartFilling;
+        }
+        if (<%- JSON.stringify(editor.userid) %> != null && !externalStorage) {
             config.events.onRequestHistory = onRequestHistory;
             config.events.onRequestHistoryData = onRequestHistoryData;
             config.events.onRequestRename = onRequestRename;
-            config.events.onRequestUsers = onRequestUsers;
             config.events.onRequestSaveAs = onRequestSaveAs;
-            config.events.onRequestSendNotify = onRequestSendNotify;
             config.events.onRequestReferenceData = onRequestReferenceData;
             config.events.onRequestReferenceSource = onRequestReferenceSource;
             config.events.onRequestRefreshFile = onRequestRefreshFile;
-            config.events.onRequestStartFilling = onRequestStartFilling;
-            config.events.onStartFilling = onStartFilling;
             if (<%- JSON.stringify(editor.userid) %> != "uid-3") {
                 config.events.onRequestHistoryClose = onRequestHistoryClose;
                 config.events.onRequestRestore = onRequestRestore;

@@ -27,13 +27,13 @@
         "fileKey": <%- JSON.stringify(editor.fileKey) %>,
         "instanceId": <%- JSON.stringify(editor.instanceId) %>
     },
-    "title": "<%- file.name %>",
-    "url": "<%- file.uri %>"
+    "title": <%- JSON.stringify(file.name) %>,
+    "url": <%- JSON.stringify(file.uri) %>
 },
 "documentType": "<%- editor.documentType %>",
 "editorConfig": {
     "actionLink": <%- editor.actionData %>,
-    "callbackUrl": "<%- editor.callbackUrl %>",
+    "callbackUrl": <%- JSON.stringify(editor.callbackUrl) %>,
     "coEditing": <%- JSON.stringify(editor.coEditing) %>,
     "createUrl": <%- JSON.stringify(editor.createUrl) %>,
     "customization": {
@@ -44,7 +44,7 @@
         "features": {
             "featuresTips": <%- editor.featuresTips %>
         },
-        "forcesave": false,
+        "forcesave": <%- JSON.stringify(!!editor.forcesave) %>,
         "goback": <%- JSON.stringify(editor.goback) %>,
         "submitForm": <%- editor.submitForm %>
     },
@@ -63,9 +63,9 @@
     "elixir": <%- JSON.stringify(editor.elixir) %>,
     "user": {
         "group": "<%- editor.userGroup %>",
-        "id": "<%- editor.userid %>",
-        "image": "<%- editor.userImage %>",
-        "name": "<%- editor.name %>",
+        "id": <%- JSON.stringify(editor.userid == null ? "" : String(editor.userid)) %>,
+        "image": <%- JSON.stringify(editor.userImage == null ? "" : String(editor.userImage)) %>,
+        "name": <%- JSON.stringify(editor.name) %>,
         "roles": <%- JSON.stringify(editor.userRoles) %>
     }
 },
