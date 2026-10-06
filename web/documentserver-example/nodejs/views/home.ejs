@@ -32,7 +32,10 @@
   const types = ['word', 'cell', 'slide', 'pdf'];
   const blankExt = { word: 'docx', cell: 'xlsx', slide: 'pptx', pdf: 'pdf' };
   const langParam = '&lang=' + encodeURIComponent(lang.editor);
-  const initials = (user.name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('');
+  const avatar = (cls) => account.image
+    ? `<span class="avatar ${cls}" style="--av:${account.color}"><img src="${account.image}" alt="" /></span>`
+    : `<span class="avatar ${cls}" style="--av:${account.color}" aria-hidden="true">${account.initials.replace(/[<>&"]/g, '')}</span>`;
+  const cloudLabel = nc.connected ? account.serverHost : t('nav.cloud');
 %>
 <body>
     <a class="skip-link" href="#main"><%= t('skipToContent') %></a>
@@ -51,8 +54,11 @@
                 placeholder="<%= t('search.placeholder') %>" aria-label="<%= t('search.label') %>" />
             <kbd class="search-kbd" aria-hidden="true">/</kbd>
         </div>
-        <div class="account" title="<%= t('account.label', { name: user.name }) %>">
-            <span class="avatar" aria-label="<%= t('account.label', { name: user.name }) %>"><%= initials %></span>
+        <div class="account">
+            <button type="button" class="account-btn" id="account-btn" aria-haspopup="dialog" aria-expanded="false"
+                aria-controls="account-panel" title="<%= account.name %>" aria-label="<%= t('account.menuLabel', { name: account.name }) %>">
+                <%- avatar('') %>
+            </button>
         </div>
     </header>
 
@@ -73,6 +79,18 @@
                 <svg class="ic ic-f" aria-hidden="true"><use href="#i-open-f"/></svg>
                 <span><%= t('nav.open') %></span>
             </a>
+            <a class="rail-item" href="#cloud" data-view="cloud" title="<%= nc.connected ? account.server : t('nav.cloudTitle') %>">
+                <svg class="ic ic-r" aria-hidden="true"><use href="#i-cloud"/></svg>
+                <svg class="ic ic-f" aria-hidden="true"><use href="#i-cloud-f"/></svg>
+                <span class="rail-label-clip"><%= cloudLabel %></span>
+            </a>
+            <% if (devMode) { %>
+            <a class="rail-item" href="#local" data-view="local" title="<%= t('nav.localTitle') %>">
+                <svg class="ic ic-r" aria-hidden="true"><use href="#i-laptop"/></svg>
+                <svg class="ic ic-f" aria-hidden="true"><use href="#i-laptop-f"/></svg>
+                <span><%= t('nav.local') %></span>
+            </a>
+            <% } %>
             <div class="rail-sep" role="separator"></div>
             <% types.forEach((type) => { %>
                 <a class="rail-item rail-app" href="#<%= type %>" data-view="<%= type %>" data-type="<%= type %>">
@@ -82,13 +100,23 @@
                 </a>
             <% }) %>
             <div class="rail-fill"></div>
+            <% if (devMode) { %>
             <a class="rail-item rail-dev" href="?dev=1" title="<%= t('dev.title') %>">
                 <svg class="ic" aria-hidden="true"><use href="#i-wrench"/></svg>
                 <span><%= t('dev.label') %></span>
             </a>
+            <% } %>
         </nav>
 
         <main id="main" tabindex="-1">
+            <section class="connect-card" id="connect-card" aria-labelledby="connect-title" hidden>
+                <svg class="connect-icon" aria-hidden="true"><use href="#i-cloud"/></svg>
+                <div class="connect-text">
+                    <h2 id="connect-title"><%= t('nc.card.title') %></h2>
+                    <p><%= t('nc.card.body') %></p>
+                </div>
+                <button type="button" class="btn btn-primary" data-connect="1"><%= t('nc.connect') %></button>
+            </section>
             <section class="start" id="start" aria-labelledby="start-title">
                 <h1 class="section-title" id="start-title"><%= t('home.startNew') %></h1>
                 <div class="tiles" id="tiles">
@@ -126,6 +154,7 @@
             <section class="recent" id="recent" aria-labelledby="recent-title">
                 <div class="recent-head">
                     <h2 class="section-title" id="recent-title"><%= t('recent.title') %></h2>
+                    <nav class="crumbs" id="crumbs" aria-label="<%= t('nc.crumbs') %>" hidden></nav>
                     <div class="chips" id="chips" role="group" aria-label="<%= t('filter.label') %>">
                         <button type="button" class="chip" data-filter="" aria-pressed="true"><%= t('filter.all') %></button>
                         <% types.forEach((type) => { %>
@@ -133,6 +162,10 @@
                         <% }) %>
                     </div>
                     <span class="recent-fill"></span>
+                    <button type="button" class="btn btn-subtle" id="new-button" aria-haspopup="menu" hidden>
+                        <svg class="ic-sm" aria-hidden="true"><use href="#i-add"/></svg>
+                        <span><%= t('nc.newIn') %></span>
+                    </button>
                     <label class="btn btn-subtle" id="upload-button" for="file-input">
                         <svg class="ic-sm" aria-hidden="true"><use href="#i-upload"/></svg>
                         <span><%= t('upload.button') %></span>
@@ -170,11 +203,111 @@
         <button type="button" role="menuitem" data-action="download">
             <svg class="ic-sm" aria-hidden="true"><use href="#i-download"/></svg><span><%= t('action.download') %></span>
         </button>
-        <div class="menu-sep" role="separator"></div>
-        <button type="button" role="menuitem" data-action="delete" class="danger">
+        <button type="button" role="menuitem" data-action="location" data-nc="1">
+            <svg class="ic-sm" aria-hidden="true"><use href="#i-open"/></svg><span><%= t('nc.action.location') %></span>
+        </button>
+        <button type="button" role="menuitem" data-action="web" data-nc="1">
+            <svg class="ic-sm" aria-hidden="true"><use href="#i-cloud"/></svg><span><%= t('nc.action.web', { server: account.serverHost || 'Nextcloud' }) %></span>
+        </button>
+        <div class="menu-sep" role="separator" data-local="1"></div>
+        <button type="button" role="menuitem" data-action="delete" class="danger" data-local="1">
             <svg class="ic-sm" aria-hidden="true"><use href="#i-delete"/></svg><span><%= t('action.delete') %></span>
         </button>
     </div>
+
+    <div class="menu" id="new-menu" role="menu" hidden>
+        <% ['word', 'cell', 'slide'].forEach((type) => { %>
+        <button type="button" role="menuitem" data-new="<%= blankExt[type] %>">
+            <svg class="ic-sm t-<%= type %>" aria-hidden="true"><use href="#i-<%= type %>-f"/></svg><span><%= t('tile.blank.' + type) %></span>
+        </button>
+        <% }) %>
+    </div>
+
+    <div class="account-panel" id="account-panel" role="dialog" aria-label="<%= t('account.title') %>" hidden>
+        <div class="acct-head">
+            <%- avatar('avatar-lg') %>
+            <div class="acct-id">
+                <div class="acct-name" id="acct-name"><%= account.name %></div>
+                <div class="acct-sub"><%= nc.connected ? (account.email || account.login || '') : t('account.localProfile') %></div>
+                <% if (nc.connected) { %><div class="acct-sub acct-server"><svg class="ic-xs" aria-hidden="true"><use href="#i-cloud"/></svg><span><%= account.serverHost %></span></div><% } %>
+            </div>
+        </div>
+        <div class="acct-actions">
+            <% if (nc.connected) { %>
+                <a class="acct-item" href="<%= account.server %>/index.php/settings/user/security" target="_blank" rel="noopener noreferrer">
+                    <svg class="ic-sm" aria-hidden="true"><use href="#i-person"/></svg><span><%= t('account.manage', { server: account.serverHost }) %></span>
+                </a>
+                <button type="button" class="acct-item" id="acct-disconnect">
+                    <svg class="ic-sm" aria-hidden="true"><use href="#i-sign-out"/></svg><span><%= t('nc.disconnect') %></span>
+                </button>
+            <% } else { %>
+                <button type="button" class="acct-item" data-connect="1">
+                    <svg class="ic-sm" aria-hidden="true"><use href="#i-link"/></svg><span><%= t('nc.connect') %></span>
+                </button>
+                <button type="button" class="acct-item" id="acct-rename">
+                    <svg class="ic-sm" aria-hidden="true"><use href="#i-edit"/></svg><span><%= t('account.changeName') %></span>
+                </button>
+            <% } %>
+            <div class="menu-sep" role="separator"></div>
+            <button type="button" class="acct-item" id="acct-dev" role="switch" aria-checked="<%= devMode ? 'true' : 'false' %>">
+                <svg class="ic-sm" aria-hidden="true"><use href="#i-wrench"/></svg><span><%= t('account.devMode') %></span>
+                <span class="switch" aria-hidden="true"></span>
+            </button>
+            <% if (devMode) { %>
+                <div class="acct-group" role="group" aria-label="<%= t('account.testUser') %>">
+                    <div class="acct-group-title"><%= t('account.testUser') %></div>
+                    <button type="button" class="acct-item acct-test" data-test-user="" aria-pressed="<%= account.devUser ? 'false' : 'true' %>">
+                        <svg class="ic-sm" aria-hidden="true"><use href="#i-check"/></svg><span><%= t('account.testUserNone', { name: account.name }) %></span>
+                    </button>
+                    <% account.testUsers.forEach((u) => { %>
+                    <button type="button" class="acct-item acct-test" data-test-user="<%= u.id %>" aria-pressed="<%= account.devUser === u.id ? 'true' : 'false' %>">
+                        <svg class="ic-sm" aria-hidden="true"><use href="#i-check"/></svg><span><%= u.name %></span>
+                    </button>
+                    <% }) %>
+                </div>
+            <% } %>
+        </div>
+        <p class="acct-privacy"><svg class="ic-xs" aria-hidden="true"><use href="#i-lock"/></svg><span><%= t('account.privacy') %></span></p>
+    </div>
+
+    <dialog class="dialog" id="connect-dialog" aria-labelledby="connect-dialog-title">
+        <form id="connect-form" novalidate>
+            <h2 id="connect-dialog-title"><%= t('nc.dialog.title') %></h2>
+            <div class="connect-step" id="connect-step-server">
+                <p><%= t('nc.dialog.body') %></p>
+                <label class="field-label" for="connect-server"><%= t('nc.dialog.server') %></label>
+                <input class="field" type="url" id="connect-server" name="server" autocomplete="url" spellcheck="false"
+                    value="<%= nc.defaultServer %>" placeholder="https://cloud.example.org" required />
+                <p class="field-hint"><%= t('nc.dialog.hint') %></p>
+                <p class="field-error" id="connect-error" role="alert" hidden></p>
+                <div class="dialog-actions">
+                    <button type="submit" class="btn btn-primary" id="connect-submit"><%= t('nc.dialog.continue') %></button>
+                    <button type="button" class="btn" data-close="1"><%= t('action.cancel') %></button>
+                </div>
+            </div>
+            <div class="connect-step" id="connect-step-wait" hidden>
+                <p class="connect-wait"><span class="spinner" aria-hidden="true"></span><span id="connect-wait-text"></span></p>
+                <p class="field-hint"><%= t('nc.dialog.waitHint') %> <a href="#" id="connect-reopen" target="_blank" rel="noopener"><%= t('nc.dialog.reopen') %></a></p>
+                <div class="dialog-actions">
+                    <button type="button" class="btn" data-close="1"><%= t('action.cancel') %></button>
+                </div>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog class="dialog" id="profile-dialog" aria-labelledby="profile-title">
+        <form id="profile-form" method="dialog">
+            <h2 id="profile-title"><%= t('profile.title') %></h2>
+            <p><%= t('profile.body') %></p>
+            <label class="field-label" for="profile-name"><%= t('profile.name') %></label>
+            <input class="field" type="text" id="profile-name" maxlength="80" autocomplete="name"
+                value="<%= account.named ? account.name : '' %>" placeholder="<%= t('profile.defaultName') %>" />
+            <div class="dialog-actions">
+                <button class="btn btn-primary" value="ok"><%= t('profile.save') %></button>
+                <button class="btn" value="skip" id="profile-skip"><%= t('profile.skip') %></button>
+            </div>
+        </form>
+    </dialog>
 
     <dialog class="dialog" id="confirm" aria-labelledby="confirm-title">
         <form method="dialog">
@@ -211,6 +344,11 @@
         convertExts,
         maxFileSize,
         apiUrl,
+        account,
+        nc,
+        devMode,
+        csrf,
+        askName: account.source === 'local' && !account.named && !account.asked,
         startTitles: {
             home: t('home.startNew'),
             new: t('new.title'),
