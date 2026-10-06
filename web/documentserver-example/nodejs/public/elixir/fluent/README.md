@@ -27,3 +27,13 @@ a563cf9166f4f91aa617557ed272612b7f0a2f72.
 | i-dismiss | Dismiss 24 regular |
 | i-new-tab | Open 24 regular |
 | i-warning | Warning 24 regular |
+| i-cloud, i-cloud-f | Cloud 24 regular / filled |
+| i-folder | Folder 24 filled |
+| i-laptop, i-laptop-f | Laptop 24 regular / filled |
+| i-person | Person 24 regular |
+| i-edit | Edit 24 regular |
+| i-sign-out | Sign Out 24 regular |
+| i-link | Plug Connected 24 regular |
+| i-check | Checkmark 24 regular |
+| i-chevron | Chevron Right 24 regular |
+| i-lock | Lock Closed 24 regular |

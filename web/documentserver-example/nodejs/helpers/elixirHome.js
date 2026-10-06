@@ -21,6 +21,9 @@
 // uploaded, converted, downloaded and deleted through the existing routes
 // (/editor, /upload, /convert, /download, DELETE /file). The test harness
 // (upstream index page) stays reachable with ?dev=1.
+//
+// Storage: the user's Nextcloud (elixirNextcloud.js). The example's local
+// test storage (per IP address) is only shown in developer mode.
 
 const express = require('express');
 const path = require('path');
@@ -29,6 +32,11 @@ const config = require('config');
 const DocManager = require('./docManager');
 const fileUtility = require('./fileUtility');
 const users = require('./users');
+const identityLib = require('./elixirIdentity');
+const session = require('./elixirSession');
+
+// set by elixirNextcloud (no require cycle): default server, http allowed
+const nextcloudDefaults = { defaultServer: 'https://murena.io', allowHttp: false };
 
 const configServer = config.get('server');
 const publicDir = path.join(__dirname, '..', 'public');
@@ -148,6 +156,30 @@ const listFiles = (docManager) => docManager.getStoredFiles().map((file) => {
   };
 }).sort((a, b) => b.time - a.time);
 
+// account menu data (start page and editor title bar)
+const accountInfo = (req, t, server) => {
+  const id = identityLib.identity(req, t, server);
+  const dev = identityLib.devMode(req);
+  const devUser = dev ? (req.elixir.data().devUser || null) : null;
+  return {
+    source: id.source,
+    name: id.name,
+    named: id.named,
+    asked: !!((req.elixir.data().profile || {}).asked),
+    login: id.login || '',
+    email: id.email || '',
+    server: id.server || '',
+    serverHost: id.serverHost || '',
+    image: id.image || '',
+    initials: id.initials,
+    color: id.color,
+    homeUrl: `${server}/`,
+    devMode: dev,
+    devUser,
+    testUsers: dev ? users.getAllUsers().map((u) => ({ id: u.id, name: u.name || t('account.anonymous') })) : [],
+  };
+};
+
 // Editor configuration for the ElixirOffice backstage (File menu): the start
 // page templates of the same document type, the recent files and the host URLs
 // used by the Open, Share and title bar pages (editorConfig.elixir).
@@ -178,6 +210,7 @@ const editorExtras = (docManager, req, fileName) => {
     templates: templates.length ? templates : null,
     recent,
     elixir: {
+      account: { ...accountInfo(req, t, server), reloadUrl: `${server}${req.originalUrl}` },
       homeUrl: `${server}/`,
       openUrl: `${server}/#open`,
       uploadUrl: `${server}/upload`,
@@ -194,8 +227,13 @@ module.exports = function elixirHome() {
   const router = express.Router();
 
   router.get('/', (req, res, next) => {
-    // the upstream test harness (user switcher, languages, WOPI…) stays available
+    // the upstream test harness (user switcher, languages, WOPI…) stays available,
+    // and turns developer mode on for this browser
     if (req.query.dev === '1' || req.query.dev === 'true') {
+      if (req.elixir && !req.elixir.data().dev) {
+        req.elixir.update((data) => { data.dev = true; }).then(() => next(), () => next());
+        return;
+      }
       next();
       return;
     }
@@ -203,7 +241,9 @@ module.exports = function elixirHome() {
       const docManager = new DocManager(req, res);
       const lang = resolveLanguage(req);
       const t = translator(lang.ui);
-      const user = users.getUser(req.query.userid);
+      const server = docManager.getServerUrl();
+      const account = accountInfo(req, t, server);
+      const sessionData = req.elixir.data();
       const templates = loadTemplates().map((tpl) => ({
         id: tpl.id,
         title: localized(tpl.title, lang.ui),
@@ -219,9 +259,17 @@ module.exports = function elixirHome() {
         iconSprite,
         hasLogo: fileSystem.existsSync(path.join(brandDir, 'logo.svg')),
         hasFavicon: fileSystem.existsSync(path.join(brandDir, 'favicon.svg')),
-        user: { id: user.id, name: user.name || '' },
+        account,
+        csrf: req.elixir.csrf(),
+        nc: {
+          connected: account.source === 'nextcloud',
+          defaultServer: nextcloudDefaults.defaultServer,
+          allowHttp: nextcloudDefaults.allowHttp,
+          lastFolder: sessionData.lastFolder || '/',
+        },
+        devMode: account.devMode,
         templates,
-        files: listFiles(docManager),
+        files: account.devMode ? listFiles(docManager) : [],
         uploadExts: fileUtility.getSuppotredExtensions().filter((ext) => fileUtility.getFormatActions(ext).length),
         convertExts: fileUtility.getConvertExtensions(),
         maxFileSize: configServer.get('maxFileSize'),
@@ -271,7 +319,75 @@ module.exports = function elixirHome() {
     }
   });
 
+  // ---- identity, developer mode, notices (JSON; state changes need X-Elixir: 1)
+  const api = (fn) => (req, res) => {
+    res.removeHeader('Access-Control-Allow-Origin');
+    res.setHeader('Cache-Control', 'no-store');
+    if (req.method !== 'GET' && req.get('X-Elixir') !== '1') {
+      res.status(403).json({ error: 'csrf' });
+      return;
+    }
+    Promise.resolve(fn(req, res)).catch((ex) => {
+      console.log(ex);
+      res.status(500).json({ error: 'Server error' });
+    });
+  };
+
+  router.get('/elixir/api/me', api((req, res) => {
+    const t = translator(resolveLanguage(req).ui);
+    res.json(accountInfo(req, t, new DocManager(req, res).getServerUrl()));
+  }));
+
+  router.post('/elixir/api/profile', api(async (req, res) => {
+    const name = String((req.body && req.body.name) || '').replace(/[\u0000-\u001f\u007f<>]/g, '').trim().slice(0, 80);
+    await req.elixir.update((data) => {
+      data.profile = data.profile || {};
+      data.profile.name = name;
+      data.profile.asked = true;
+    });
+    const t = translator(resolveLanguage(req).ui);
+    res.json(accountInfo(req, t, new DocManager(req, res).getServerUrl()));
+  }));
+
+  router.post('/elixir/api/dev', api(async (req, res) => {
+    const on = !!(req.body && req.body.on);
+    const userId = req.body && req.body.user;
+    await req.elixir.update((data) => {
+      data.dev = on;
+      if (!on) data.devUser = null;
+      else if (userId !== undefined) {
+        data.devUser = userId && users.getAllUsers().some((u) => u.id === userId) ? userId : null;
+      }
+    });
+    res.json({ ok: true, devMode: on });
+  }));
+
+  router.get('/elixir/api/notices', api(async (req, res) => {
+    const notices = req.elixir.data().notices || [];
+    if (notices.length) await req.elixir.update((data) => { data.notices = []; });
+    res.json({ notices });
+  }));
+
+  router.get('/elixir/avatar/:id', (req, res) => {
+    const avatar = session.readAvatar(req.params.id);
+    if (!avatar) {
+      res.sendStatus(404);
+      return;
+    }
+    res.setHeader('Content-Type', avatar.type);
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.end(avatar.data);
+  });
+
   return router;
 };
 
 module.exports.editorExtras = editorExtras;
+module.exports.nextcloudDefaults = nextcloudDefaults;
+module.exports.accountInfo = accountInfo;
+module.exports.resolveLanguage = resolveLanguage;
+module.exports.translator = translator;
+module.exports.loadTemplates = loadTemplates;
+module.exports.templatesDir = templatesDir;
+module.exports.localized = localized;

@@ -98,12 +98,81 @@ a { color: inherit; }
 .search input:focus ~ .search-kbd, .search input:not(:placeholder-shown) ~ .search-kbd { display: none; }
 
 .account { justify-self: end; display: flex; align-items: center; }
+.account-btn {
+  display: inline-flex; padding: 2px; border: 0; border-radius: 50%; background: transparent; cursor: pointer;
+}
+.account-btn:hover .avatar, .account-btn[aria-expanded="true"] .avatar { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--border-strong); }
 .avatar {
-  display: inline-flex; align-items: center; justify-content: center;
+  display: inline-flex; align-items: center; justify-content: center; flex: none; overflow: hidden;
   width: 32px; height: 32px; border-radius: 50%;
-  background: var(--accent-soft); color: var(--accent-text);
+  background: var(--av, var(--accent)); color: #fff;
   font-size: 13px; font-weight: 600; user-select: none;
 }
+.avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.avatar-lg { width: 56px; height: 56px; font-size: 20px; }
+.ic-xs { width: 16px; height: 16px; flex: none; }
+
+/* ---------- account panel ---------- */
+.account-panel {
+  position: fixed; top: calc(var(--topbar-h) - 4px); right: 12px; z-index: 55; width: 320px; max-width: calc(100vw - 24px);
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow-3);
+  padding: 16px 8px 8px;
+}
+.acct-head { display: flex; align-items: center; gap: 14px; padding: 0 8px 14px; border-bottom: 1px solid var(--border); }
+.acct-id { min-width: 0; }
+.acct-name { font-size: 16px; line-height: 22px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acct-sub { color: var(--text-2); font-size: 13px; line-height: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acct-server { display: flex; align-items: center; gap: 4px; }
+.acct-actions { padding-top: 6px; }
+.acct-item {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 36px; padding: 0 10px;
+  border: 0; border-radius: 4px; background: transparent; text-align: left; cursor: pointer; text-decoration: none;
+}
+.acct-item:hover, .acct-item:focus-visible { background: var(--hover); outline: none; }
+.acct-item .ic-sm { color: var(--text-2); }
+.acct-item > span:not(.switch) { flex: 1; }
+.switch { position: relative; width: 34px; height: 18px; border-radius: 9px; background: var(--border-strong); flex: none; transition: background-color .12s; }
+.switch::after { content: ""; position: absolute; left: 3px; top: 3px; width: 12px; height: 12px; border-radius: 50%; background: #fff; transition: transform .12s; }
+.acct-item[aria-checked="true"] .switch { background: var(--accent); }
+.acct-item[aria-checked="true"] .switch::after { transform: translateX(16px); }
+.acct-group-title { padding: 6px 10px 2px; font-size: 12px; font-weight: 600; color: var(--text-2); }
+.acct-test .ic-sm { visibility: hidden; }
+.acct-test[aria-pressed="true"] .ic-sm { visibility: visible; color: var(--accent); }
+.acct-privacy { display: flex; gap: 6px; margin: 8px 8px 2px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 12px; line-height: 16px; color: var(--text-2); }
+.acct-privacy .ic-xs { margin-top: 0; }
+
+/* ---------- connect card, dialogs ---------- */
+.connect-card {
+  display: flex; align-items: center; gap: 20px; margin-bottom: 28px; padding: 18px 20px;
+  background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 8px;
+}
+.connect-icon { width: 36px; height: 36px; color: var(--accent); flex: none; }
+.connect-text { flex: 1; min-width: 0; }
+.connect-text h2 { margin: 0 0 2px; font-size: 16px; line-height: 22px; }
+.connect-text p { margin: 0; color: var(--text-2); }
+.field-label { display: block; margin: 0 0 6px; font-weight: 600; }
+.field {
+  width: 100%; height: 34px; padding: 0 10px; border: 1px solid var(--border-strong); border-radius: 4px; background: var(--surface);
+}
+.field:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent); }
+.dialog p.field-hint { margin: 8px 0 20px; font-size: 12px; line-height: 16px; }
+.dialog p.field-error { margin: -8px 0 16px; color: var(--danger); }
+.dialog form > p { margin-bottom: 16px; }
+.dialog .field + .dialog-actions { margin-top: 24px; }
+.connect-wait { display: flex; align-items: center; gap: 10px; }
+.spinner { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border); border-top-color: var(--accent); animation: spin .8s linear infinite; flex: none; }
+
+/* ---------- Nextcloud folder ---------- */
+.crumbs { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; font-size: 20px; line-height: 28px; font-weight: 600; min-width: 0; }
+.crumb { padding: 2px 6px; border: 0; border-radius: 4px; background: transparent; font: inherit; color: var(--text-2); cursor: pointer; }
+.crumb:hover { background: var(--hover); color: var(--text); }
+span.crumb { color: var(--text); cursor: default; }
+.crumb-sep { width: 16px; height: 16px; color: var(--text-3); }
+.t-folder { color: #c49a1b; }
+.file-where { display: block; font-size: 12px; line-height: 14px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; }
+.files td.c-name { line-height: 18px; }
+.files tr.unsupported .file-link { color: var(--text-2); }
+.rail-label-clip { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ---------- layout ---------- */
 .layout { display: grid; grid-template-columns: var(--rail-w) minmax(0, 1fr); min-height: calc(100vh - var(--topbar-h)); }
