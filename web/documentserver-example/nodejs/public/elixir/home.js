@@ -61,6 +61,7 @@
     return i < 0 ? '' : name.slice(i + 1).toLowerCase();
   };
   var serverHost = (data.account && data.account.serverHost) || '';
+  var serverName = (data.account && data.account.serverName) || serverHost;
 
   function localItem(f) {
     return { kind: 'file', source: 'local', name: f.name, documentType: f.documentType, time: f.time, size: f.size, url: editorUrl(f.name) };
@@ -318,7 +319,7 @@
       frag.appendChild(b);
       if (!last) frag.appendChild(svgUse('chevron', 'crumb-sep'));
     };
-    add(serverHost || t('nav.cloud'), '/', parts.length === 0);
+    add(serverName || t('nav.cloud'), '/', parts.length === 0);
     parts.forEach(function (part, i) { add(part, '/' + parts.slice(0, i + 1).join('/'), i === parts.length - 1); });
     nav.replaceChildren(frag);
   };

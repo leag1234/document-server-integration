@@ -170,6 +170,7 @@ const accountInfo = (req, t, server) => {
     email: id.email || '',
     server: id.server || '',
     serverHost: id.serverHost || '',
+    serverName: id.serverName || '',
     image: id.image || '',
     initials: id.initials,
     color: id.color,

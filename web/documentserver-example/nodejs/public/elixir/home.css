@@ -30,13 +30,15 @@
   --t-pdf: #c33a44;
   --t-file: #6b6b73;
 
-  --font: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Ubuntu, Cantarell, "Noto Sans", Arial, sans-serif;
+  /* Segoe UI on Windows, San Francisco on macOS (-apple-system: Safari and Firefox), then the system UI font */
+  --font: "Segoe UI Variable Text", "Segoe UI Variable", "Segoe UI", -apple-system, BlinkMacSystemFont, system-ui, "Helvetica Neue", Ubuntu, Cantarell, "Noto Sans", Arial, sans-serif;
   --radius: 6px;
   --shadow-1: 0 1px 2px rgba(0, 0, 0, .06), 0 1px 3px rgba(0, 0, 0, .06);
   --shadow-2: 0 4px 12px rgba(0, 0, 0, .10), 0 1px 3px rgba(0, 0, 0, .06);
   --shadow-3: 0 12px 32px rgba(0, 0, 0, .16), 0 2px 6px rgba(0, 0, 0, .08);
   --topbar-h: 48px;
-  --rail-w: 76px;
+  /* app rail like Microsoft 365: icon over a small label that wraps, never clipped */
+  --rail-w: 84px;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -97,9 +99,10 @@ a { color: inherit; }
 }
 .search input:focus ~ .search-kbd, .search input:not(:placeholder-shown) ~ .search-kbd { display: none; }
 
-.account { justify-self: end; display: flex; align-items: center; }
+.account { justify-self: end; display: flex; align-items: center; flex: none; padding: 0 4px; }
 .account-btn {
-  display: inline-flex; padding: 2px; border: 0; border-radius: 50%; background: transparent; cursor: pointer;
+  display: inline-flex; flex: none; padding: 2px; margin: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer;
+  line-height: 0; overflow: visible;
 }
 .account-btn:hover .avatar, .account-btn[aria-expanded="true"] .avatar { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--border-strong); }
 .avatar {
@@ -168,38 +171,42 @@ a { color: inherit; }
 .crumb:hover { background: var(--hover); color: var(--text); }
 span.crumb { color: var(--text); cursor: default; }
 .crumb-sep { width: 16px; height: 16px; color: var(--text-3); }
-.t-folder { color: #c49a1b; }
+/* folders: two-tone Office yellow, drawn in the symbol itself (i-folder) */
+.t-folder { color: #e8a317; }
 .file-where { display: block; font-size: 12px; line-height: 14px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; }
 .files td.c-name { line-height: 18px; }
 .files tr.unsupported .file-link { color: var(--text-2); }
-.rail-label-clip { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ---------- layout ---------- */
 .layout { display: grid; grid-template-columns: var(--rail-w) minmax(0, 1fr); min-height: calc(100vh - var(--topbar-h)); }
 
 .rail {
   position: sticky; top: var(--topbar-h); height: calc(100vh - var(--topbar-h));
-  display: flex; flex-direction: column; gap: 2px; padding: 8px 6px;
+  display: flex; flex-direction: column; gap: 2px; padding: 8px 4px;
   background: var(--surface); border-right: 1px solid var(--border);
-  overflow-y: auto;
+  overflow-x: hidden; overflow-y: auto;
 }
 .rail-item {
   position: relative;
   display: flex; flex-direction: column; align-items: center; gap: 2px;
-  padding: 8px 2px 7px; border-radius: var(--radius);
+  flex: none; min-width: 0;
+  padding: 8px 4px 7px; border-radius: var(--radius);
   color: var(--text-2); text-decoration: none; text-align: center;
-  font-size: 11px; line-height: 14px;
+  font-size: 11px; line-height: 13px;
   transition: background-color .1s, color .1s;
 }
 .rail-item:hover { background: var(--hover); color: var(--text); }
 .rail-item:active { background: var(--pressed); }
 .rail-item .ic { width: 24px; height: 24px; flex: none; }
+/* the label wraps between words (hyphenated when the language allows it) and,
+   for a single word too long for the rail, anywhere: never cut */
+.rail-item > span { display: block; max-width: 100%; white-space: normal; overflow-wrap: anywhere; hyphens: auto; -webkit-hyphens: auto; }
 .rail-item .ic-f { display: none; }
 .rail-item[aria-current="page"] { color: var(--accent-text); background: var(--accent-softer); font-weight: 600; }
 .rail-item[aria-current="page"] .ic-r { display: none; }
 .rail-item[aria-current="page"] .ic-f { display: block; }
 .rail-item[aria-current="page"]::before {
-  content: ""; position: absolute; left: -6px; top: 12px; bottom: 12px; width: 3px;
+  content: ""; position: absolute; left: -4px; top: 12px; bottom: 12px; width: 3px;
   border-radius: 0 3px 3px 0; background: var(--accent);
 }
 .rail-item.rail-app[aria-current="page"] { color: var(--text); }

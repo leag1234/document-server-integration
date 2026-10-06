@@ -24,7 +24,27 @@
 // presence, comments and tracked changes carry the real name.
 
 const crypto = require('crypto');
+const config = require('config');
 const users = require('./users');
+
+// Friendly names of Nextcloud servers, shown in the start page rail and as the
+// root of the folder view ("Murena Workspace" rather than "murena.io"). A host
+// matches itself and its subdomains. Other servers are called "Nextcloud".
+// elixir.nextcloud.serverNames ({ "<host>": "<name>" }) adds or overrides entries.
+const KNOWN_SERVERS = { 'murena.io': 'Murena Workspace' };
+const configuredNames = () => {
+  try {
+    return (config.has('elixir.nextcloud.serverNames') && config.get('elixir.nextcloud.serverNames')) || {};
+  } catch (e) { return {}; }
+};
+const serverName = (host) => {
+  const h = String(host || '').toLowerCase().replace(/:\d+$/, '');
+  const names = {};
+  Object.entries({ ...KNOWN_SERVERS, ...configuredNames() }).forEach(([k, v]) => { names[k.toLowerCase()] = v; });
+  const key = Object.keys(names).filter((k) => h === k || h.endsWith(`.${k}`))
+    .sort((a, b) => b.length - a.length)[0];
+  return key ? names[key] : 'Nextcloud';
+};
 
 // accessible avatar colours (white text, contrast >= 4.5:1)
 const COLORS = ['#a4262c', '#ca5010', '#8e562e', '#407855', '#038387', '#0078d4',
@@ -58,6 +78,7 @@ const identity = (req, t, serverUrl) => {
       login: nc.userId,
       server: nc.server,
       serverHost: host,
+      serverName: serverName(host),
       image: nc.avatarId && serverUrl ? `${serverUrl}/elixir/avatar/${nc.avatarId}` : null,
       initials: initialsOf(nc.displayName || nc.userId),
       color: colorOf(id),
@@ -120,4 +141,5 @@ module.exports = {
   initialsOf,
   colorOf,
   ncUserId,
+  serverName,
 };

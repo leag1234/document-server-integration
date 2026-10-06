@@ -35,7 +35,7 @@
   const avatar = (cls) => account.image
     ? `<span class="avatar ${cls}" style="--av:${account.color}"><img src="${account.image}" alt="" /></span>`
     : `<span class="avatar ${cls}" style="--av:${account.color}" aria-hidden="true">${account.initials.replace(/[<>&"]/g, '')}</span>`;
-  const cloudLabel = nc.connected ? account.serverHost : t('nav.cloud');
+  const cloudLabel = nc.connected ? (account.serverName || account.serverHost) : t('nav.cloud');
 %>
 <body>
     <a class="skip-link" href="#main"><%= t('skipToContent') %></a>
@@ -82,7 +82,7 @@
             <a class="rail-item" href="#cloud" data-view="cloud" title="<%= nc.connected ? account.server : t('nav.cloudTitle') %>">
                 <svg class="ic ic-r" aria-hidden="true"><use href="#i-cloud"/></svg>
                 <svg class="ic ic-f" aria-hidden="true"><use href="#i-cloud-f"/></svg>
-                <span class="rail-label-clip"><%= cloudLabel %></span>
+                <span><%= cloudLabel %></span>
             </a>
             <% if (devMode) { %>
             <a class="rail-item" href="#local" data-view="local" title="<%= t('nav.localTitle') %>">
