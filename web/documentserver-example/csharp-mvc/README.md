@@ -43,7 +43,7 @@ Configure the IIS components for the server to work correctly:
 Open the *web.appsettings.config* file and [specify the same secret key](https://helpcenter.onlyoffice.com/installation/docs-configure-jwt.aspx) as used in your Document Server to enable JWT: 
 
 ```
-<add key="files.docservice.secret" value="euro-office-dev-jwt-secret-key-2026" />
+<add key="files.docservice.secret" value="elixiroffice-dev-jwt-secret-key-2026" />
 ```
 
 ## Step 5. Run your website with the editors

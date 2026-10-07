@@ -1,6 +1,6 @@
 ﻿{
   "server": {
-    "appName": "Euro-Office",
+    "appName": "ElixirOffice",
     "port": 80,
     "siteUrl": "http://127.0.0.1:8000/"
   }

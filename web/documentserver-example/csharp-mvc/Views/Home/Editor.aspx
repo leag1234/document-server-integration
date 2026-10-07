@@ -30,7 +30,7 @@
     *
     -->
     <link rel="icon" href="<%= "content/images/" + Model.DocumentType + ".ico" %>" type="image/x-icon" />
-    <title><%= Model.FileName + " - Euro-Office" %></title>
+    <title><%= Model.FileName + " - ElixirOffice" %></title>
 
     <%: Styles.Render("~/Content/editor") %>
 
@@ -118,7 +118,7 @@
         // the meta information of the document is changed via the meta command
         var onMetaChange = function (event) {
             if (event.data.title !== undefined) {
-                document.title = event.data.title + " - Euro-Office";
+                document.title = event.data.title + " - ElixirOffice";
             }
 
             if (event.data.favorite !== undefined) {

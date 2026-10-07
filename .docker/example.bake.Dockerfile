@@ -28,7 +28,7 @@ FROM web-base AS build-example
     ENV COMPANY_NAME=${COMPANY_NAME}
     COPY --from=brand-icons /[d]ocument-server-integration/web/documentserver-example/nodejs /app/
     RUN find /app/config/ -type f -name '*.json' \
-        -exec sed -i "s/Euro-Office/${COMPANY_NAME}/g" {} +
+        -exec sed -i "s/ElixirOffice/${COMPANY_NAME}/g" {} +
 
 
     WORKDIR /app

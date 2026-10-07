@@ -203,12 +203,12 @@ class ConfigurationManagerJWTSecretTests(TestCase):
         self.assertEqual(secret, '')
 
     @patch.dict(environ, {
-        'JWT_SECRET': 'euro-office-dev-jwt-secret-key-2026'
+        'JWT_SECRET': 'elixiroffice-dev-jwt-secret-key-2026'
     })
     def test_assigns_a_value_from_the_environment(self):
         config_manager = ConfigurationManager()
         secret = config_manager.jwt_secret()
-        self.assertEqual(secret, 'euro-office-dev-jwt-secret-key-2026')
+        self.assertEqual(secret, 'elixiroffice-dev-jwt-secret-key-2026')
 
 
 class ConfigurationManagerJWTHeaderTests(TestCase):

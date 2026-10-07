@@ -1,9 +1,9 @@
 {
   "server": {
-    "appName": "Euro-Office",
+    "appName": "ElixirOffice",
     "siteUrl": "/",
     "maxFileSize": 104857600,
-    "storageFolder": "/var/lib/euro-office/documentserver-example/files",
+    "storageFolder": "/var/lib/elixiroffice/documentserver-example/files",
     "enableForgotten": false
   }
 }

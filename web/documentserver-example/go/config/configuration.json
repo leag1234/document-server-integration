@@ -12,7 +12,7 @@
 
   "JWT_IS_ENABLED" : false,
   "JWT_EXPIRES_IN" : 5,
-  "JWT_SECRET" : "euro-office-dev-jwt-secret-key-2026",
+  "JWT_SECRET" : "elixiroffice-dev-jwt-secret-key-2026",
   "JWT_HEADER" : "Authorization",
 
   "STORAGE_PATH" : "filestore",

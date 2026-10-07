@@ -24,7 +24,7 @@ SERVER_PORT=port
 DOC_SERVER_HOST=http://documentserver/
 
 JWT_IS_ENABLED=flag
-JWT_SECRET=euro-office-dev-jwt-secret-key-2026
+JWT_SECRET=elixiroffice-dev-jwt-secret-key-2026
 JWT_HEADER=Authorization
 ```
 
@@ -62,7 +62,7 @@ Also, [specify the same secret key](https://helpcenter.onlyoffice.com/installati
 
 ```
 {
-    "JWT_SECRET" : "euro-office-dev-jwt-secret-key-2026",
+    "JWT_SECRET" : "elixiroffice-dev-jwt-secret-key-2026",
 }
 ```
 

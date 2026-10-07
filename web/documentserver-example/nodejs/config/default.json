@@ -34,7 +34,7 @@
         "algorithmRequest": "HS256",
         "authorizationHeader": "Authorization",
         "authorizationHeaderPrefix": "Bearer ",
-        "secret": "euro-office-dev-jwt-secret-key-2026",
+        "secret": "elixiroffice-dev-jwt-secret-key-2026",
         "expiresIn": "5m"
     },
     "verify_peer_off": true,

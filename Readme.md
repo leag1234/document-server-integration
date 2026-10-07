@@ -4,26 +4,26 @@ These test examples are simple document management systems that can be built int
 Do NOT use these integration examples on your own server without proper code modifications!
 In case you enabled any of the test examples, disable it before going for production.
 
-These examples show the way to integrate [Euro-Office Docs][1] into your own website or application using one of the programming languages.
+These examples show the way to integrate [ElixirOffice Docs][1] into your own website or application using one of the programming languages.
 The package contains examples written in .Net (C# MVC), .Net (C#), Go, Java, Java Spring, Node.js, PHP, PHP (Laravel), Python and Ruby.
 
 You should change `http://documentserver` to your server address in these files:
-* [.Net (C# MVC)](https://github.com/Euro-Office/document-server-integration/tree/main/web/documentserver-example/csharp-mvc) - `web/documentserver-example/csharp-mvc/web.appsettings.config`
-* [.Net (C#)](https://github.com/Euro-Office/document-server-integration/tree/main/web/documentserver-example/csharp) - `web/documentserver-example/csharp/settings.config`
-* [Go](https://github.com/Euro-Office/document-server-integration/tree/main/web/documentserver-example/go) - `web\documentserver-example\go\config\configuration.json`
-* [Java](https://github.com/Euro-Office/document-server-integration/tree/main/web/documentserver-example/java) - `web/documentserver-example/java/src/main/resources/settings.properties`
-* [Java Spring](https://github.com/Euro-Office/document-server-integration/tree/main/web/documentserver-example/java-spring) - `web/documentserver-example/java-spring/src/main/resources/application.properties`
-* [Node.js](https://github.com/Euro-Office/document-server-integration/tree/main/web/documentserver-example/nodejs) - `web/documentserver-example/nodejs/config/default.json`
-* [PHP](https://github.com/Euro-Office/document-server-integration/tree/main/web/documentserver-example/php) - `web/documentserver-example/php/src/configuration/ConfigurationManager.php`
-* [PHP (Laravel)](https://github.com/Euro-Office/document-server-integration/tree/main/web/documentserver-example/php-laravel) - `web/documentserver-example/php-laravel/.env.example`
-* [Python](https://github.com/Euro-Office/document-server-integration/tree/main/web/documentserver-example/python) - `web/documentserver-example/python/src/configuration/configuration.py`
-* [Ruby](https://github.com/Euro-Office/document-server-integration/tree/main/web/documentserver-example/ruby) - `web/documentserver-example/ruby/app/configuration/configuration.rb`
+* [.Net (C# MVC)](https://github.com/elixiroffice/document-server-integration/tree/main/web/documentserver-example/csharp-mvc) - `web/documentserver-example/csharp-mvc/web.appsettings.config`
+* [.Net (C#)](https://github.com/elixiroffice/document-server-integration/tree/main/web/documentserver-example/csharp) - `web/documentserver-example/csharp/settings.config`
+* [Go](https://github.com/elixiroffice/document-server-integration/tree/main/web/documentserver-example/go) - `web\documentserver-example\go\config\configuration.json`
+* [Java](https://github.com/elixiroffice/document-server-integration/tree/main/web/documentserver-example/java) - `web/documentserver-example/java/src/main/resources/settings.properties`
+* [Java Spring](https://github.com/elixiroffice/document-server-integration/tree/main/web/documentserver-example/java-spring) - `web/documentserver-example/java-spring/src/main/resources/application.properties`
+* [Node.js](https://github.com/elixiroffice/document-server-integration/tree/main/web/documentserver-example/nodejs) - `web/documentserver-example/nodejs/config/default.json`
+* [PHP](https://github.com/elixiroffice/document-server-integration/tree/main/web/documentserver-example/php) - `web/documentserver-example/php/src/configuration/ConfigurationManager.php`
+* [PHP (Laravel)](https://github.com/elixiroffice/document-server-integration/tree/main/web/documentserver-example/php-laravel) - `web/documentserver-example/php-laravel/.env.example`
+* [Python](https://github.com/elixiroffice/document-server-integration/tree/main/web/documentserver-example/python) - `web/documentserver-example/python/src/configuration/configuration.py`
+* [Ruby](https://github.com/elixiroffice/document-server-integration/tree/main/web/documentserver-example/ruby) - `web/documentserver-example/ruby/app/configuration/configuration.rb`
 
 
 ## Quick Start — minimal Docker test environment
 
 The repository ships a `docker-compose.yml` that starts a self-contained
-Euro-Office DocumentServer with the Node.js integration example enabled
+ElixirOffice DocumentServer with the Node.js integration example enabled
 automatically. No extra configuration or manual service start is required.
 
 **Prerequisites:** Docker with the Compose plugin (v2).
@@ -132,21 +132,21 @@ Please keep in mind the following security aspects when you are using test examp
 
 * There is no protection of the storage from unauthorized access since there is no need for authorization.
 * There are no checks against parameter substitution in links, since the parameters are generated by the code according to the pre-arranged scripts.
-* There are no data checks in requests of saving the file after editing, since each test example is intended for requests only from Euro-Office Document Server.
-* There are no prohibitions on using test examples from other sites, since they are intended to interact with Euro-Office Document Server from another domain.
+* There are no data checks in requests of saving the file after editing, since each test example is intended for requests only from ElixirOffice Document Server.
+* There are no prohibitions on using test examples from other sites, since they are intended to interact with ElixirOffice Document Server from another domain.
 
 ## Project Information
 
-Official website: [https://github.com/Euro-Office](https://github.com/Euro-Office)
+Official website: [https://github.com/elixiroffice](https://github.com/elixiroffice)
 
-Code repository: [https://github.com/Euro-Office/document-server-integration](https://github.com/Euro-Office/document-server-integration "https://github.com/Euro-Office/document-server-integration")
+Code repository: [https://github.com/elixiroffice/document-server-integration](https://github.com/elixiroffice/document-server-integration "https://github.com/elixiroffice/document-server-integration")
 
 
 ## User Feedback and Support
 
-If you have any problems with or questions about [Euro-Office Document Server][1]
+If you have any problems with or questions about [ElixirOffice Document Server][1]
 
-  [1]: https://github.com/Euro-Office/DocumentServer
+  [1]: https://github.com/elixiroffice/DocumentServer
   
 ## License
 

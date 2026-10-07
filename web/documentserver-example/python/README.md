@@ -74,7 +74,7 @@ The example is configured by changing environment variables.
 | `DOCUMENT_SERVER_PRIVATE_URL` | The URL through which the server will communicate with Document Server. | `http://proxy:8080`     |
 | `DOCUMENT_SERVER_PUBLIC_URL`  | The URL through which a user will communicate with Document Server.     | `http://localhost:8080` |
 | `EXAMPLE_URL`                 | The URL through which Document Server will communicate with the server. | `http://proxy`          |
-| `JWT_SECRET`                  | JWT authorization secret. Leave blank to disable authorization.         | `euro-office-dev-jwt-secret-key-2026`   |
+| `JWT_SECRET`                  | JWT authorization secret. Leave blank to disable authorization.         | `elixiroffice-dev-jwt-secret-key-2026`   |
 
 ## Security Info
 

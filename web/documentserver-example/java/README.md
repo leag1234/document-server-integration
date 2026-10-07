@@ -93,7 +93,7 @@ To run the Java example code, install the Java version appropriate for your OS a
 Open the *src/main/resouces/settings.properties* file and [specify the same secret key](https://helpcenter.onlyoffice.com/installation/docs-configure-jwt.aspx) as used in your Document Server to enable JWT: 
 
 ```
-files.docservice.secret=euro-office-dev-jwt-secret-key-2026
+files.docservice.secret=elixiroffice-dev-jwt-secret-key-2026
 ```
 
 ### Step 6. Run the Java code
@@ -187,7 +187,7 @@ See the detailed guide to learn how to [install Document Server for Linux](https
 	[Specify the same secret key](https://helpcenter.onlyoffice.com/installation/docs-configure-jwt.aspx) as used in your Document Server to enable JWT: 
 
 	```
-	files.docservice.secret=euro-office-dev-jwt-secret-key-2026
+	files.docservice.secret=elixiroffice-dev-jwt-secret-key-2026
 	```
 
 5. Install **Maven**:
@@ -295,7 +295,7 @@ See the detailed guide to learn how to install Document Server [for Docker](http
 	[Specify the same secret key](https://helpcenter.onlyoffice.com/installation/docs-configure-jwt.aspx) as used in your Document Server to enable JWT: 
 
 	```
-	files.docservice.secret=euro-office-dev-jwt-secret-key-2026
+	files.docservice.secret=elixiroffice-dev-jwt-secret-key-2026
 	```
 
 6. Run the next command in the Java example directory:

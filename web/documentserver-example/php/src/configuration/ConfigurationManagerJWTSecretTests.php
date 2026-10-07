@@ -46,9 +46,9 @@ final class ConfigurationManagerJWTSecretTests extends TestCase
 
     public function testAssignsAValueFromTheEnvironment()
     {
-        putenv('JWT_SECRET=euro-office-dev-jwt-secret-key-2026');
+        putenv('JWT_SECRET=elixiroffice-dev-jwt-secret-key-2026');
         $configManager = new ConfigurationManager();
         $secret = $configManager->jwtSecret();
-        $this->assertEquals('euro-office-dev-jwt-secret-key-2026', $secret);
+        $this->assertEquals('elixiroffice-dev-jwt-secret-key-2026', $secret);
     }
 }

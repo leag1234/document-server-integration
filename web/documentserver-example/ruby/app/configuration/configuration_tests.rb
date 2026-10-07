@@ -201,10 +201,10 @@ class ConfigurationManagerJWTSecretTests < Test::Unit::TestCase
   end
 
   def test_assigns_a_value_from_the_environment
-    ENV['JWT_SECRET'] = 'euro-office-dev-jwt-secret-key-2026'
+    ENV['JWT_SECRET'] = 'elixiroffice-dev-jwt-secret-key-2026'
     config_manager = ConfigurationManager.new
     secret = config_manager.jwt_secret
-    assert_equal(secret, 'euro-office-dev-jwt-secret-key-2026')
+    assert_equal(secret, 'elixiroffice-dev-jwt-secret-key-2026')
   end
 end
 

@@ -7,7 +7,7 @@ services:
     expose:
       - "80"
     environment:
-      - JWT_SECRET=euro-office-dev-jwt-secret-key-2026
+      - JWT_SECRET=elixiroffice-dev-jwt-secret-key-2026
 
   example:
     container_name: example
@@ -21,7 +21,7 @@ services:
       - DOCUMENT_SERVER_PRIVATE_URL=http://proxy:8080
       - DOCUMENT_SERVER_PUBLIC_URL=http://localhost:8080
       - EXAMPLE_URL=http://proxy
-      - JWT_SECRET=euro-office-dev-jwt-secret-key-2026
+      - JWT_SECRET=elixiroffice-dev-jwt-secret-key-2026
       - PORT=80
 
   proxy:

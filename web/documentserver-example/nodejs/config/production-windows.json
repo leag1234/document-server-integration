@@ -1,6 +1,6 @@
 {
   "server": {
-    "appName": "Euro-Office",
+    "appName": "ElixirOffice",
     "siteUrl": "/",
     "maxFileSize": 104857600,
     "enableForgotten": false

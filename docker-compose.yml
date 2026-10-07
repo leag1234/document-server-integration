@@ -9,7 +9,7 @@
 #     make build-image
 #
 # This command builds the image:
-#     euro-office/documentserver:latest
+#     elixiroffice/documentserver:latest
 #
 # -----------------------------------------------------------------------------
 # Starting the services
@@ -42,10 +42,10 @@ name: minimal-documentserver-test
 
 services:
   documentserver:
-    image: ghcr.io/euro-office/documentserver:latest
+    image: ghcr.io/elixiroffice/documentserver:latest
     environment:
       EXAMPLE_ENABLED: "true"
-      JWT_SECRET: "euro-office-dev-jwt-secret-key-2026"
+      JWT_SECRET: "elixiroffice-dev-jwt-secret-key-2026"
     container_name: eo-documentserver
     ports:
       - "8080:80"
