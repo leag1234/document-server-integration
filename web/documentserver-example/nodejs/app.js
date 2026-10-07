@@ -50,6 +50,10 @@ const cfgSignatureUseForRequest = configServer.get('token.useforrequest');
 const cfgSignatureAuthorizationHeader = configServer.get('token.authorizationHeader');
 const cfgSignatureAuthorizationHeaderPrefix = configServer.get('token.authorizationHeaderPrefix');
 const cfgSignatureSecretExpiresIn = configServer.get('token.expiresIn');
+// the data of "Image from storage", "Document from storage" and "Mail merge" is signed once, when the page is
+// served, but used whenever the user picks the command (right-click menu, Insert tab): with the 5 minute lifetime
+// of the editor token the editor reported "The document security token is not correctly formed" after 5 minutes
+const cfgDataTokenExpiresIn = '12h';
 const cfgSignatureSecret = configServer.get('token.secret');
 const verifyPeerOff = configServer.get('verify_peer_off');
 const plugins = config.get('plugins');
@@ -1375,17 +1379,17 @@ const renderEditor = (req, res, ext = null) => { // define a handler for editing
           argss.dataInsertImage.token = jwt.sign(
             argss.dataInsertImage,
             cfgSignatureSecret,
-            { expiresIn: cfgSignatureSecretExpiresIn },
+            { expiresIn: cfgDataTokenExpiresIn },
           );
           argss.dataDocument.token = jwt.sign(
             argss.dataDocument,
             cfgSignatureSecret,
-            { expiresIn: cfgSignatureSecretExpiresIn },
+            { expiresIn: cfgDataTokenExpiresIn },
           );
           argss.dataSpreadsheet.token = jwt.sign(
             argss.dataSpreadsheet,
             cfgSignatureSecret,
-            { expiresIn: cfgSignatureSecretExpiresIn },
+            { expiresIn: cfgDataTokenExpiresIn },
           );
         }
         res.render('editor', argss); // render the editor template with the parameters specified
