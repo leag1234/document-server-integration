@@ -18,9 +18,9 @@
 
 // Start page behaviour. No framework: the page is server-rendered and this
 // script switches views, renders the file lists and drives uploads.
-// Storage: the user's Nextcloud (/elixir/nc/*) when connected; the example's
-// local test storage (/upload, /convert, /download, DELETE /file) only in
-// developer mode.
+// Storage: this server's own storage (/upload, /convert, /download, DELETE /file)
+// always works, with or without a cloud; when connected to Nextcloud / Murena
+// (/elixir/nc/*) the user chooses between the two (default: the cloud).
 (function home() {
   'use strict';
 
@@ -30,6 +30,10 @@
   var VIEWS = ['home', 'new', 'open', 'cloud', 'local'].concat(TYPES);
   var connected = !!(data.nc && data.nc.connected);
   var devMode = !!data.devMode;
+  var store = {
+    get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) { /* storage blocked */ } },
+  };
 
   var $ = function (id) { return document.getElementById(id); };
   var t = function (key, vars) {
@@ -54,6 +58,14 @@
     folder: { path: (data.nc && data.nc.lastFolder) || '/', items: [], loaded: false, canCreate: true },
     rows: [],
     menuItem: null,
+    target: connected && store.get('elx-target') === 'local' ? 'local' : (connected ? 'nc' : 'local'),
+  };
+  // where a new or uploaded document goes: the browsed place, else the chosen one
+  var targetFor = function () {
+    if (!connected) return 'local';
+    if (state.view === 'cloud') return 'nc';
+    if (state.view === 'local') return 'local';
+    return state.target;
   };
 
   var extOf = function (name) {
@@ -140,14 +152,13 @@
   var isType = function (view) { return TYPES.indexOf(view) !== -1; };
   var currentList = function () {
     if (state.view === 'cloud') return state.folder.items;
-    if (state.view === 'local') return state.local;
-    if (connected) return state.recent;
-    return devMode ? state.local : [];
+    if (state.view === 'local' || !connected) return state.local;
+    return state.recent.concat(state.local).sort(function (a, b) { return (b.time || 0) - (a.time || 0); });
   };
   var listSource = function () {
-    if (state.view === 'local') return 'local';
-    if (state.view === 'cloud' || connected) return 'nc';
-    return devMode ? 'local' : 'none';
+    if (state.view === 'local' || !connected) return 'local';
+    if (state.view === 'cloud') return 'nc';
+    return 'both';
   };
 
   // ---------- file list ----------
@@ -194,6 +205,11 @@
         var parent = f.path.slice(0, f.path.lastIndexOf('/')) || '/';
         where.textContent = parent === '/' ? serverHost : serverHost + parent;
         tdName.appendChild(where);
+      } else if (f.source === 'local' && connected && state.view === 'home') {
+        var here = document.createElement('span');
+        here.className = 'file-where';
+        here.textContent = t('loc.where');
+        tdName.appendChild(here);
       }
       tr.appendChild(tdName);
 
@@ -226,7 +242,7 @@
     body.replaceChildren(frag);
 
     var src = listSource();
-    var loading = (src === 'nc' && state.view === 'cloud' && !state.folder.loaded) || (src === 'nc' && state.view !== 'cloud' && !state.recentLoaded);
+    var loading = (src === 'nc' && !state.folder.loaded) || (src === 'both' && !state.recentLoaded);
     var none = all.length === 0;
     $('files').hidden = none || list.length === 0;
     $('empty').hidden = !none;
@@ -234,10 +250,9 @@
     if (none) {
       var title = t('empty.title');
       var bodyText = t('empty.body');
-      if (src === 'none') { title = t('nc.empty.notConnected'); bodyText = t('nc.empty.notConnectedBody'); }
-      else if (loading) { title = t('nc.loading'); bodyText = ''; }
+      if (loading) { title = t('nc.loading'); bodyText = ''; }
       else if (state.view === 'cloud') { title = t('nc.empty.folder'); bodyText = t('nc.empty.folderBody'); }
-      else if (src === 'nc') { title = t('nc.empty.recent'); bodyText = t('nc.empty.recentBody', { server: serverHost }); }
+      else if (src === 'both') { title = t('nc.empty.recent'); bodyText = t('nc.empty.recentBody', { server: serverHost }); }
       $('empty').querySelector('.empty-title').textContent = title;
       $('empty').querySelector('.empty-body').textContent = bodyText;
     }
@@ -247,7 +262,6 @@
   };
 
   var refreshLocal = function () {
-    if (!devMode) return Promise.resolve();
     return fetch('elixir/api/files', { cache: 'no-store' })
       .then(function (r) { return r.json(); })
       .then(function (res) {
@@ -302,7 +316,7 @@
   var refreshFiles = function () {
     if (state.view === 'cloud') return loadFolder(state.folder.path);
     if (state.view === 'local') return refreshLocal();
-    return Promise.all([refreshRecent(), connected ? null : refreshLocal()]);
+    return Promise.all([refreshRecent(), refreshLocal()]);
   };
 
   // ---------- breadcrumbs (Nextcloud folder) ----------
@@ -341,22 +355,24 @@
     var m = /template=([^&]+)/.exec(tile.dataset.localHref);
     tile.dataset.template = m ? decodeURIComponent(m[1]) : '';
   });
-  // without Nextcloud (and outside developer mode) a new file has nowhere to go: ask to connect
+  // creating never needs a cloud: the tile's own href creates the document on this
+  // server; when connected and the cloud is the chosen place, point it at Nextcloud
+  var aimTile = function (tile) {
+    tile.href = targetFor() === 'nc' ? newUrl(BLANK[tile.dataset.type], tile.dataset.template) : tile.dataset.localHref;
+  };
   $('tiles').addEventListener('click', function (e) {
     var tile = e.target.closest('.tile');
-    if (!tile) return;
-    if (connected) tile.href = newUrl(BLANK[tile.dataset.type], tile.dataset.template);
-    else if (!devMode) { e.preventDefault(); openConnect(); }
+    if (tile) aimTile(tile);
   });
   $('tiles').addEventListener('auxclick', function (e) {
     var tile = e.target.closest('.tile');
-    if (tile && connected) tile.href = newUrl(BLANK[tile.dataset.type], tile.dataset.template);
+    if (tile) aimTile(tile);
   });
 
   // ---------- views ----------
   var setView = function (view) {
     if (VIEWS.indexOf(view) === -1) view = 'home';
-    if (view === 'local' && !devMode) view = 'home';
+    if (view === 'local' && !connected) view = 'home';
     state.view = view;
     var typeView = isType(view);
     var browsing = view === 'cloud' || view === 'local';
@@ -366,7 +382,8 @@
       else a.removeAttribute('aria-current');
     });
 
-    $('connect-card').hidden = connected || browsing && view === 'local' || view === 'new' || view === 'open' && devMode;
+    $('connect-card').hidden = connected || connectDismissed || browsing || view === 'new' || view === 'open';
+    $('loc-pick').hidden = !connected || browsing || view === 'cloud';
     $('start').hidden = view === 'open' || browsing;
     $('start-title').textContent = data.startTitles[view] || data.startTitles.home;
     document.querySelectorAll('#tiles .tile').forEach(function (tile) {
@@ -384,7 +401,7 @@
     $('crumbs').hidden = view !== 'cloud';
     $('recent-title').hidden = view === 'cloud';
     $('new-button').hidden = view !== 'cloud';
-    $('upload-button').hidden = view === 'open' || listSource() === 'none';
+    $('upload-button').hidden = view === 'open';
     if (view === 'local') $('recent-title').textContent = t('local.title');
     else $('recent-title').textContent = typeView ? t('recent.recentOf.' + view) : t('recent.title');
     if (view === 'cloud') {
@@ -394,6 +411,27 @@
     }
     renderFiles();
   };
+
+  // ---------- creation place (connected only) ----------
+  var connectDismissed = store.get('elx-connect-dismissed') === '1';
+  $('connect-dismiss').addEventListener('click', function () {
+    connectDismissed = true;
+    store.set('elx-connect-dismissed', '1');
+    $('connect-card').hidden = true;
+  });
+  var syncTarget = function () {
+    document.querySelectorAll('#loc-pick .loc-opt').forEach(function (b) {
+      b.setAttribute('aria-checked', String(b.dataset.loc === state.target));
+    });
+  };
+  $('loc-pick').addEventListener('click', function (e) {
+    var b = e.target.closest('.loc-opt');
+    if (!b) return;
+    state.target = b.dataset.loc;
+    store.set('elx-target', state.target);
+    syncTarget();
+  });
+  syncTarget();
 
   var onHash = function () { setView((location.hash || '#home').slice(1)); };
   window.addEventListener('hashchange', onHash);
@@ -646,8 +684,7 @@
 
   var upload = function (file) {
     if (busy || !file) return;
-    var target = state.view === 'local' ? 'local' : (connected ? 'nc' : (devMode ? 'local' : 'none'));
-    if (target === 'none') { openConnect(); return; }
+    var target = targetFor();
     var ext = extOf(file.name);
     if (data.uploadExts.indexOf(ext) === -1) {
       toast(t('error.unsupported', { name: file.name }), { error: true });

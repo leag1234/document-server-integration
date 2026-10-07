@@ -270,7 +270,7 @@ module.exports = function elixirHome() {
         },
         devMode: account.devMode,
         templates,
-        files: account.devMode ? listFiles(docManager) : [],
+        files: listFiles(docManager),
         uploadExts: fileUtility.getSuppotredExtensions().filter((ext) => fileUtility.getFormatActions(ext).length),
         convertExts: fileUtility.getConvertExtensions(),
         maxFileSize: configServer.get('maxFileSize'),

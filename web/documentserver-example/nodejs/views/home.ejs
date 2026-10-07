@@ -84,7 +84,7 @@
                 <svg class="ic ic-f" aria-hidden="true"><use href="#i-cloud-f"/></svg>
                 <span><%= cloudLabel %></span>
             </a>
-            <% if (devMode) { %>
+            <% if (nc.connected) { %>
             <a class="rail-item" href="#local" data-view="local" title="<%= t('nav.localTitle') %>">
                 <svg class="ic ic-r" aria-hidden="true"><use href="#i-laptop"/></svg>
                 <svg class="ic ic-f" aria-hidden="true"><use href="#i-laptop-f"/></svg>
@@ -116,7 +116,15 @@
                     <p><%= t('nc.card.body') %></p>
                 </div>
                 <button type="button" class="btn btn-primary" data-connect="1"><%= t('nc.connect') %></button>
+                <button type="button" class="icon-btn" id="connect-dismiss" aria-label="<%= t('nc.card.dismiss') %>" title="<%= t('nc.card.dismiss') %>">
+                    <svg class="ic-sm" aria-hidden="true"><use href="#i-dismiss"/></svg>
+                </button>
             </section>
+            <div class="loc-pick" id="loc-pick" role="radiogroup" aria-label="<%= t('loc.label') %>" hidden>
+                <span class="loc-label"><%= t('loc.label') %></span>
+                <button type="button" class="loc-opt" role="radio" data-loc="nc" aria-checked="true"><%= cloudLabel %></button>
+                <button type="button" class="loc-opt" role="radio" data-loc="local" aria-checked="false"><%= t('loc.server') %></button>
+            </div>
             <section class="start" id="start" aria-labelledby="start-title">
                 <h1 class="section-title" id="start-title"><%= t('home.startNew') %></h1>
                 <div class="tiles" id="tiles">
