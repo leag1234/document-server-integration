@@ -9,6 +9,8 @@
   "app.cell": "Spreadsheet",
   "app.slide": "Presentation",
   "app.pdf": "PDF form",
+  "install.label": "Install app",
+  "install.title": "Install ElixirOffice as an app: its window receives Office keys such as Ctrl+Tab and Ctrl+PageDown",
   "dev.label": "Developer",
   "dev.title": "Open the integration test harness (users, languages, WOPI…)",
   "search.placeholder": "Search",

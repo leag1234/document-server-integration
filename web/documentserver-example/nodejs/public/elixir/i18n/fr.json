@@ -9,6 +9,8 @@
   "app.cell": "Classeur",
   "app.slide": "Présentation",
   "app.pdf": "Formulaire PDF",
+  "install.label": "Installer l’appli",
+  "install.title": "Installer ElixirOffice comme application : sa fenêtre reçoit les raccourcis Office comme Ctrl+Tab et Ctrl+Page suivante",
   "dev.label": "Développeur",
   "dev.title": "Ouvrir le banc de test de l’intégration (utilisateurs, langues, WOPI…)",
   "search.placeholder": "Rechercher",

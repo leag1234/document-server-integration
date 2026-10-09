@@ -26,6 +26,8 @@
     -->
     <title><%= appName %></title>
     <% if (hasFavicon) { %><link rel="icon" href="elixir/brand/favicon.svg" type="image/svg+xml" /><% } %>
+    <link rel="manifest" href="elixir/brand/manifest.webmanifest" />
+    <meta name="theme-color" content="#0082c9" />
     <link rel="stylesheet" href="elixir/home.css" />
 </head>
 <%
@@ -100,6 +102,10 @@
                 </a>
             <% }) %>
             <div class="rail-fill"></div>
+            <button type="button" class="rail-item rail-install" id="install-app" hidden title="<%= t('install.title') %>">
+                <svg class="ic" aria-hidden="true"><use href="#i-download"/></svg>
+                <span><%= t('install.label') %></span>
+            </button>
             <% if (devMode) { %>
             <a class="rail-item rail-dev" href="?dev=1" title="<%= t('dev.title') %>">
                 <svg class="ic" aria-hidden="true"><use href="#i-wrench"/></svg>

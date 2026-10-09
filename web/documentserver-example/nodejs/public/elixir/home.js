@@ -1027,4 +1027,12 @@
   onHash();
   if (connected) { refreshRecent(); showNotices(); }
   if (data.askName && !location.hash.match(/cloud/)) openProfile();
+  // Install as an app: the installed window has no tabs, so Office keys such as Ctrl+Tab, Ctrl+PageDown and Ctrl+T reach the editor
+  (function () {
+    var btn = document.getElementById('install-app'), deferred = null;
+    if (!btn) return;
+    window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferred = e; btn.hidden = false; });
+    window.addEventListener('appinstalled', function () { deferred = null; btn.hidden = true; });
+    btn.addEventListener('click', function () { if (deferred) { var p = deferred; deferred = null; btn.hidden = true; p.prompt(); } });
+  }());
 }());

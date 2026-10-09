@@ -426,3 +426,8 @@ main > section { max-width: 1280px; }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+.rail-install { color: var(--text-3); }
+.rail-install .ic { width: 20px; height: 20px; }
+.rail-install[hidden] { display: none; }
+button.rail-item { background: none; border: 0; font: inherit; cursor: pointer; width: 100%; text-align: inherit; }
