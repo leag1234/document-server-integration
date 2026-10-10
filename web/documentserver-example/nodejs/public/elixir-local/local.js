@@ -8,9 +8,13 @@
  var editor,controller,abort,file,opening=false;
  function status(text){message.textContent=text;}
  function script(win,url){return new Promise(function(resolve,reject){var s=win.document.createElement('script');s.src=url;s.onload=resolve;s.onerror=function(){reject(new Error('Cannot load local editor assets'));};win.document.head.appendChild(s);});}
+ function unsaved(){return controller&&(controller.hasPendingImages()||controller.isModified());}
  function download(bytes,name){var url=URL.createObjectURL(new Blob([bytes],{type:'application/octet-stream'})),a=document.createElement('a');a.href=url;a.download=name||file.name;a.click();setTimeout(function(){URL.revokeObjectURL(url);},1000);status('Saved locally. No document was uploaded.');}
  async function open(selected){
-  if(!selected||opening)return;opening=true;window.EOLocalFailure=null;file=selected;input.disabled=true;save.disabled=true;cancel.disabled=false;abort=new AbortController();
+  if(!selected||opening)return;input.value='';
+  if(!/\.(docx|odt|xlsx|ods|pptx|odp)$/i.test(selected.name))throw new Error('Unsupported local document format');
+  if(unsaved()&&!window.confirm('This local document has unsaved changes. Open another file and discard them?')){input.value='';return;}
+  opening=true;window.EOLocalFailure=null;window.EOLocalSession=null;file=selected;input.disabled=true;save.disabled=true;cancel.disabled=false;abort=new AbortController();
   if(controller)controller.dispose();controller=null;if(editor)editor.destroyEditor();
   var format=file.name.split('.').pop().toLowerCase(),kind={docx:'word',odt:'word',xlsx:'cell',ods:'cell',pptx:'slide',odp:'slide'}[format];
   if(!kind){opening=false;input.disabled=false;cancel.disabled=true;throw new Error('Unsupported local document format');}

@@ -27,7 +27,8 @@
   var file=input.files[0];
   (async function(){
    var server= !setting.checked && await reachable();
-   if(setting.checked||!server)return local(file);
+   if(setting.checked)return local(file);
+   if(!server){if(window.confirm('Server unavailable: open locally on this computer?'))return local(file);input.value='';return;}
    var replay=new Event('change',{bubbles:true});replay.eoServerAllowed=true;input.dispatchEvent(replay);
   })().catch(function(e){panel.textContent='Cannot open locally: '+e.message;});
  },true);
@@ -39,7 +40,8 @@
   var file=transfer.files[0];
   (async function(){
    var server=!setting.checked&&await reachable();
-   if(setting.checked||!server)return local(file);
+   if(setting.checked)return local(file);
+   if(!server){if(window.confirm('Server unavailable: open locally on this computer?'))return local(file);input.value='';return;}
    var replay=new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:transfer});replay.eoServerAllowed=true;event.target.dispatchEvent(replay);
   })().catch(function(e){panel.textContent='Cannot open locally: '+e.message;});
  },true);
