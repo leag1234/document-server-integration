@@ -94,6 +94,7 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use('/local-assets', require('./helpers/elixirLocalAssets')());
 app.use(express.static(path.join(__dirname, 'public'))); // public directory
 app.use(favicon(`${__dirname}/public/images/favicon.ico`)); // use favicon
 
