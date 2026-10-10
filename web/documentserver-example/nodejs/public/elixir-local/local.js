@@ -52,7 +52,7 @@
  request.onupgradeneeded=function(){request.result.createObjectStore('pending');};
  request.onsuccess=function(){
   var db=request.result,t=db.transaction('pending','readwrite'),store=t.objectStore('pending'),get=store.get('file');
-  get.onsuccess=function(){var pending=get.result;store.delete('file');t.oncomplete=function(){db.close();if(pending)open(pending).catch(function(e){opening=false;input.disabled=false;cancel.disabled=true;window.EOLocalFailure=e.message;status(e.message);});};};
+  get.onsuccess=function(){var pending=get.result;store.delete('file');t.oncomplete=function(){db.close();if(pending)open(pending instanceof File?pending:new File([pending.bytes],pending.name,{type:pending.type,lastModified:pending.lastModified})).catch(function(e){opening=false;input.disabled=false;cancel.disabled=true;window.EOLocalFailure=e.message;status(e.message);});};};
  };
 
 })();

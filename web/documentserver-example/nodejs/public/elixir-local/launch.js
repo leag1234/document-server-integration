@@ -15,7 +15,8 @@
  setting.addEventListener('change',function(){try{localStorage.setItem(key,String(setting.checked));}catch(e){}});
  function db(){return new Promise(function(resolve,reject){var request=indexedDB.open('eo-local-launch',1);request.onupgradeneeded=function(){request.result.createObjectStore('pending');};request.onsuccess=function(){resolve(request.result);};request.onerror=function(){reject(request.error);};});}
  async function local(file){
-  var store=await db();await new Promise(function(resolve,reject){var t=store.transaction('pending','readwrite');t.objectStore('pending').put(file,'file');t.oncomplete=resolve;t.onerror=function(){reject(t.error);};});store.close();location.href='local.html'+location.search;
+  var pending={name:file.name,type:file.type,lastModified:file.lastModified,bytes:await file.arrayBuffer()};
+  var store=await db();await new Promise(function(resolve,reject){var t=store.transaction('pending','readwrite');t.objectStore('pending').put(pending,'file');t.oncomplete=resolve;t.onerror=function(){reject(t.error||new Error('Local launch storage failed'));};});store.close();location.href='local.html'+location.search;
  }
  async function reachable(){
   var abort=new AbortController(),timer=setTimeout(function(){abort.abort();},1500);
