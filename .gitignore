@@ -17,8 +17,3 @@
 *.iml
 *.iws
 .DS_Store
-/web/documentserver-example/java/target/
-/web/documentserver-example/java-spring/target/
-/web/documentserver-example/csharp/packages
-/web/documentserver-example/csharp-mvc/packages
-/web/documentserver-example/java-spring/documents/

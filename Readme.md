@@ -4,20 +4,11 @@ These test examples are simple document management systems that can be built int
 Do NOT use these integration examples on your own server without proper code modifications!
 In case you enabled any of the test examples, disable it before going for production.
 
-These examples show the way to integrate [ElixirOffice Docs][1] into your own website or application using one of the programming languages.
-The package contains examples written in .Net (C# MVC), .Net (C#), Go, Java, Java Spring, Node.js, PHP, PHP (Laravel), Python and Ruby.
+These examples show the way to integrate [ElixirOffice Docs][1] into your own website or application using Node.js.
+The package contains the Node.js example (the other languages of the upstream examples are not shipped).
 
-You should change `http://documentserver` to your server address in these files:
-* [.Net (C# MVC)](https://github.com/elixiroffice/document-server-integration/tree/main/web/documentserver-example/csharp-mvc) - `web/documentserver-example/csharp-mvc/web.appsettings.config`
-* [.Net (C#)](https://github.com/elixiroffice/document-server-integration/tree/main/web/documentserver-example/csharp) - `web/documentserver-example/csharp/settings.config`
-* [Go](https://github.com/elixiroffice/document-server-integration/tree/main/web/documentserver-example/go) - `web\documentserver-example\go\config\configuration.json`
-* [Java](https://github.com/elixiroffice/document-server-integration/tree/main/web/documentserver-example/java) - `web/documentserver-example/java/src/main/resources/settings.properties`
-* [Java Spring](https://github.com/elixiroffice/document-server-integration/tree/main/web/documentserver-example/java-spring) - `web/documentserver-example/java-spring/src/main/resources/application.properties`
+You should change `http://documentserver` to your server address in this file:
 * [Node.js](https://github.com/elixiroffice/document-server-integration/tree/main/web/documentserver-example/nodejs) - `web/documentserver-example/nodejs/config/default.json`
-* [PHP](https://github.com/elixiroffice/document-server-integration/tree/main/web/documentserver-example/php) - `web/documentserver-example/php/src/configuration/ConfigurationManager.php`
-* [PHP (Laravel)](https://github.com/elixiroffice/document-server-integration/tree/main/web/documentserver-example/php-laravel) - `web/documentserver-example/php-laravel/.env.example`
-* [Python](https://github.com/elixiroffice/document-server-integration/tree/main/web/documentserver-example/python) - `web/documentserver-example/python/src/configuration/configuration.py`
-* [Ruby](https://github.com/elixiroffice/document-server-integration/tree/main/web/documentserver-example/ruby) - `web/documentserver-example/ruby/app/configuration/configuration.rb`
 
 
 ## Quick Start — minimal Docker test environment
