@@ -11,7 +11,7 @@
   "description": "OnlineEditorsExampleNodeJS",
   "author": "Ascensio System SIA <integration@onlyoffice.com> (https://www.onlyoffice.com)",
   "bugs": {
-    "url": "https://github.com/ONLYOFFICE/document-server-integration/issues"
+    "url": "https://github.com/elixiroffice/document-server-integration/issues"
   },
   "dependencies": {
     "@mercadoeletronico/wopi-proof-validator": "^1.0.2",
@@ -34,7 +34,7 @@
   "license": "Apache",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ONLYOFFICE/document-server-integration.git"
+    "url": "git+https://github.com/elixiroffice/document-server-integration.git"
   },
   "pkg": {
     "assets": [
