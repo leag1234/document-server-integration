@@ -115,9 +115,44 @@ DocManager.prototype.requestEditnew = function requestEditnew(req, fileName, use
   return correctName;
 };
 
+// resolve the name of a file of the current user's own storage folder to its path;
+// throws an error with a `status` (400 invalid name, 404 no such file) and never returns a path
+// outside the folder of the current user
+DocManager.prototype.resolveUserFile = function resolveUserFile(rawName) {
+  const fail = (status, message) => {
+    const err = new Error(message);
+    err.status = status;
+    return err;
+  };
+  if (typeof rawName !== 'string' || rawName.trim() === '') throw fail(400, 'fileName is required');
+  if (rawName.includes('\0') || rawName !== path.basename(rawName) || rawName !== path.win32.basename(rawName)
+    || rawName === '.' || rawName === '..' || rawName.endsWith('-history')) {
+    throw fail(400, 'invalid fileName');
+  }
+  const root = path.resolve(this.storageRootPath());
+  const filePath = path.resolve(root, rawName);
+  if (path.dirname(filePath) !== root) throw fail(400, 'invalid fileName');
+  let stat;
+  try {
+    stat = fileSystem.lstatSync(filePath);
+  } catch (e) {
+    throw fail(404, 'file not found');
+  }
+  if (!stat.isFile()) throw fail(404, 'file not found');
+  return { name: rawName, path: filePath };
+};
+
+// delete all the files of the current user's own storage folder (the explicit "delete all" action)
+DocManager.prototype.clearUserStorage = function clearUserStorage() {
+  const base = path.resolve(storageConfigFolder);
+  const root = path.resolve(this.storageRootPath());
+  if (path.dirname(root) !== base) throw new Error('refusing to clean a folder that is not a user folder');
+  this.cleanFolderRecursive(root, false);
+};
+
 // delete a file with its history
 DocManager.prototype.fileRemove = function fileRemove(fileName) {
-  const filePath = this.storagePath(fileName); // get the path to this file
+  const filePath = this.resolveUserFile(fileName).path; // get the path to this file (validated)
   fileSystem.unlinkSync(filePath); // and delete it
 
   const userAddress = this.curUserHostAddress();
@@ -373,7 +408,10 @@ DocManager.prototype.curUserHostAddress = function curUserHostAddress(userAddres
     address = this.req.headers['x-forwarded-for'] || this.req.connection.remoteAddress;
   }
 
-  return address.replace(/[^0-9a-zA-Z.=]/g, '_');
+  const safe = String(address).replace(/[^0-9a-zA-Z.=]/g, '_');
+  // "." and ".." are made only of allowed characters but would make the user folder the storage
+  // root or its parent (the address comes from the client-controlled X-Forwarded-For header)
+  return /^\.*$/.test(safe) ? '_' : safe;
 };
 
 // copy file

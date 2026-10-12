@@ -461,7 +461,7 @@ if (typeof jQuery != "undefined") {
         const currentElement = jq(this);
         var fileName = currentElement.attr("data");
 
-        var requestAddress = "file?filename=" + fileName;
+        var requestAddress = "file?fileName=" + fileName;
 
         jq.ajax({
             async: true,
@@ -489,7 +489,7 @@ if (typeof jQuery != "undefined") {
                 async: true,
                 contentType: "text/xml",
                 type: "delete",
-                url: "file",
+                url: "files?confirm=delete-all",
                 complete: function (data) {
                     if (JSON.parse(data.responseText).success) {
                         window.location = collectParams();

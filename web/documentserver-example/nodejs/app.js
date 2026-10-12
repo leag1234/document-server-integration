@@ -192,6 +192,8 @@ app.delete('/forgotten', (req, res) => { // define a handler for removing forgot
     if (fileName && typeof fileName === 'string') { // if the forgotten file name is defined
       documentService.commandRequest('deleteForgotten', fileName);
       res.status(204).send();
+    } else {
+      res.sendStatus(400);
     }
   } catch (ex) {
     console.log(ex);
@@ -574,27 +576,39 @@ app.get('/files/file/:fileId', (req, res) => { // define a handler for getting f
   res.end();
 });
 
-app.delete('/file', (req, res) => { // define a handler for removing file
+// remove one file of the current user and its history; the file name is mandatory (query parameter
+// `fileName`, `filename` is accepted too) and nothing else is ever deleted by this route
+app.delete('/file', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
   try {
     req.DocManager = new DocManager(req, res);
-    let fileName = req.query.filename;
-    if (fileName) { // if the file name is defined
-      fileName = fileUtility.getFileName(fileName); // get its part without an extension
+    const fileName = req.query.fileName !== undefined ? req.query.fileName : req.query.filename;
+    // throws a 400 error when the name is missing, empty, not a string or not a plain file name
+    const file = req.DocManager.resolveUserFile(fileName);
+    req.DocManager.fileRemove(file.name); // delete the file and its history
+    res.status(200).send('{"success":true}');
+  } catch (ex) {
+    const status = ex.status || 500;
+    if (status === 500) console.log(ex);
+    res.status(status).send(JSON.stringify({ success: false, error: status === 500 ? 'Server error' : ex.message }));
+  }
+});
 
-      req.DocManager.fileRemove(fileName); // delete file and his history
-    } else {
-      // if the file name is undefined, clean the storage folder
-      req.DocManager.cleanFolderRecursive(req.DocManager.storagePath(''), false);
+// remove all the files of the current user: a separate route that needs an explicit confirmation
+app.delete('/files', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  try {
+    if (req.query.confirm !== 'delete-all') {
+      res.status(400).send('{"success":false,"error":"confirm=delete-all is required"}');
+      return;
     }
-
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.write('{"success":true}');
+    req.DocManager = new DocManager(req, res);
+    req.DocManager.clearUserStorage();
+    res.status(200).send('{"success":true}');
   } catch (ex) {
     console.log(ex);
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.write('Server error');
+    res.status(500).send('{"success":false,"error":"Server error"}');
   }
-  res.end();
 });
 
 app.get('/csv', (req, res) => { // define a handler for downloading csv files
