@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
 <title>Local documents — ElixirOffice</title>
-<style>body{margin:0;font:14px system-ui;color:#222}header{padding:10px;display:flex;gap:12px;align-items:center;background:#f5f5f5}#editor{height:calc(100vh - 62px)}#message{flex:1}button,input{font:inherit}a{color:#235f49}</style></head>
-<body><header><a href="./">Home</a><label>Open on this computer <input id="file" type="file" accept=".docx,.xlsx,.pptx,.odt,.ods,.odp"></label><button id="save" disabled>Download edited file</button><button id="cancel" disabled>Cancel</button><span id="message">Local mode: documents stay on this computer.</span></header>
+<style>body{margin:0;font:14px system-ui;color:#222}header{padding:10px;display:flex;gap:12px;align-items:center;background:#f5f5f5}html,body{height:100%;overflow:hidden}body{display:flex;flex-direction:column}header{flex:none}#editor,body>iframe{flex:1;min-height:0;width:100%;border:0}#message{flex:1}button,input{font:inherit}a{color:#235f49}</style></head>
+<body><header><a href="./">Home</a><label>Open on this computer <input id="file" type="file" accept=".docx,.odt,.rtf,.txt,.doc,.dotx,.docm,.xlsx,.ods,.csv,.xls,.xltx,.xlsm,.pptx,.odp,.ppt,.potx,.ppsx"></label><button id="save" disabled>Download current format</button><button id="cancel" disabled>Cancel</button><span id="message">Local mode: documents stay on this computer.</span></header>
 <div id="editor"></div><script src="local-assets/web-apps/apps/api/documents/api.js"></script><script src="elixir-local/local.js"></script></body></html>
