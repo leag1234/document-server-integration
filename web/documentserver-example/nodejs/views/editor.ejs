@@ -64,6 +64,7 @@
         </div>
     </div>
     <script type="text/javascript" src="<%= apiUrl %>"></script>
+    <script src="/example/elixir-file-operations.js"></script>
     <script type="text/javascript" language="javascript">
 
         var docEditor;
@@ -97,6 +98,7 @@
 
         var onMetaChange = function (event) {  // the meta information of the document is changed via the meta command
             if (event.data.title !== undefined) {
+                config.document.title = event.data.title;
                 document.title = event.data.title + " - <%= appName %>";
             }
 
@@ -122,7 +124,7 @@
               directUrl: directUrl
             };
             let xhr = new XMLHttpRequest();
-            xhr.open("POST", "historyObj");
+            xhr.open("POST", "historyObj?folder=" + encodeURIComponent(storage && storage.folder || "/"));
             xhr.setRequestHeader("Content-Type", "application/json");
             xhr.send(JSON.stringify(data));
             xhr.onload = function () {
@@ -155,7 +157,7 @@
             fileName: fileName,
           };
           let xhr = new XMLHttpRequest();
-          xhr.open("PUT", "restore");
+          xhr.open("PUT", "restore?folder=" + encodeURIComponent(storage && storage.folder || "/"));
           xhr.setRequestHeader('Content-Type', 'application/json');
           xhr.send(JSON.stringify(restoreData));
           xhr.onload = function () {
@@ -166,7 +168,7 @@
                 directUrl: directUrl
               };
               let xhr = new XMLHttpRequest();
-              xhr.open("POST", "historyObj");
+              xhr.open("POST", "historyObj?folder=" + encodeURIComponent(storage && storage.folder || "/"));
               xhr.setRequestHeader("Content-Type", "application/json");
               xhr.send(JSON.stringify(dataForHistory));
               xhr.onload = function () {
@@ -378,45 +380,26 @@
           }
         };
 
-        var onRequestSaveAs = function (event) {  //  the user is trying to save file by clicking Save Copy as... button
-            var title = event.data.title;
-            var url = event.data.url;
-            var data = {
-                title: title,
-                url: url
-            }
-            let xhr = new XMLHttpRequest();
-            xhr.open("POST", "create");
-            xhr.setRequestHeader('Content-Type', 'application/json');
-            xhr.send(JSON.stringify(data));
-            xhr.onload = function () {
-                innerAlert(xhr.responseText);
-                innerAlert(JSON.parse(xhr.responseText).file, true);
-            }
-        }
-
-        var onRequestRename = function(event) { //  the user is trying to rename file by clicking Rename... button
-            innerAlert("onRequestRename: " + JSON.stringify(event.data));
-
-            var newfilename = event.data;
-            var data = {
-                newfilename: newfilename,
-                dockey: config.document.key,
-                ext: config.document.fileType
-            };
-            let xhr = new XMLHttpRequest();
-            xhr.open("POST", "rename");
-            xhr.setRequestHeader('Content-Type', 'application/json');
-            xhr.send(JSON.stringify(data));
-            xhr.onload = function () {
-                innerAlert(xhr.responseText);
-            }
+        var fileOperations;
+        var onRequestSaveAs = function(event) {
+            var data = Object.assign({}, event.data), frame = document.querySelector('iframe');
+            var types = frame && frame.contentWindow.Asc && frame.contentWindow.Asc.c_oAscFileType;
+            var type = types && Object.keys(types).find(function(key) { return types[key] === data.fileType; });
+            var ext = type && type.toLowerCase();
+            if (ext === 'pdfa') ext = 'pdf';
+            if (ext === 'jpg' || ext === 'png' || ext === 'html') ext = 'zip';
+            if (ext) data.title = config.document.title.replace(/\.[^.]+$/, '') + '.' + ext;
+            fileOperations.saveAs(data);
+        };
+        var onRequestRename = async function(event) {
+            try { await fileOperations.rename(event.data); }
+            catch (error) { window.alert(error.message); }
         };
 
         var onRequestRefreshFile = function(event) {
             let xhr = new XMLHttpRequest();
             xhr.open("GET", "config?fileName=" + encodeURIComponent(config.document.title) +
-                "&directUrl=" + !!config.document.directUrl +
+                "&folder=" + encodeURIComponent(storage && storage.folder || "/") + "&directUrl=" + !!config.document.directUrl +
                 "&permissions=" + encodeURIComponent(JSON.stringify(config.document.permissions)));
             xhr.send();
             xhr.onload = function () {
@@ -459,8 +442,14 @@
         };
 
         // ElixirOffice: files from another storage (Nextcloud) have no local history,
-        // rename, "save copy" or reference sources in the example's storage
+        // or reference sources in the example's storage
         var externalStorage = <%- JSON.stringify(!!editor.external) %>;
+        var storage = config.editorConfig.elixir && config.editorConfig.elixir.storage;
+        if (storage) {
+            fileOperations = EOFileOperations(storage, '/example', <%- JSON.stringify(fileOperationStrings).replace(/</g,'\\u003c') %>);
+            if (storage.canRename) config.events.onRequestRename = onRequestRename;
+            if (storage.canCopy) config.events.onRequestSaveAs = onRequestSaveAs;
+        }
         if (<%- JSON.stringify(editor.userid) %> != null) {
             config.events.onRequestClose = onRequestClose;
             config.events.onRequestEditRights = onRequestEditRights;
@@ -472,8 +461,6 @@
         if (<%- JSON.stringify(editor.userid) %> != null && !externalStorage) {
             config.events.onRequestHistory = onRequestHistory;
             config.events.onRequestHistoryData = onRequestHistoryData;
-            config.events.onRequestRename = onRequestRename;
-            config.events.onRequestSaveAs = onRequestSaveAs;
             config.events.onRequestReferenceData = onRequestReferenceData;
             config.events.onRequestReferenceSource = onRequestReferenceSource;
             config.events.onRequestRefreshFile = onRequestRefreshFile;

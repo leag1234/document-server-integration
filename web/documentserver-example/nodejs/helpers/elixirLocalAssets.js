@@ -44,7 +44,7 @@ module.exports = function localAssets() {
     req.url = req.url.replace(/^\/\d+\.\d+\.\d+-[a-f0-9]+(?=\/)/, '');
     next();
   });
-  router.get(/^\/web-apps\/apps\/(documenteditor|spreadsheeteditor|presentationeditor)\/main\/index(?:_loader)?\.html$/, (req, res, next) => {
+  router.get(/^\/web-apps\/apps\/(documenteditor|spreadsheeteditor|presentationeditor|pdfeditor)\/main\/index(?:_loader)?\.html$/, (req, res, next) => {
     fs.readFile(path.join(root, req.path), 'utf8', (error, html) => {
       if (error) return next(error);
       // Packaged pages have a deeper SDK path and a server cache worker.

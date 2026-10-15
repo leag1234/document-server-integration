@@ -39,6 +39,8 @@ const elixirHome = require('./helpers/elixirHome');
 const elixirSession = require('./helpers/elixirSession');
 const elixirIdentity = require('./helpers/elixirIdentity');
 const elixirNextcloud = require('./helpers/elixirNextcloud');
+const fileOperations = require('./helpers/elixirFileOperations');
+const storagePaths = require('./helpers/elixirStoragePaths');
 const dataAutofill = require('./config/data.json');
 
 const configServer = config.get('server');
@@ -103,6 +105,7 @@ app.use(bodyParser.urlencoded({ extended: false })); // connect middleware that 
 
 app.use(elixirSession.middleware()); // ElixirOffice browser session (profile, Nextcloud connection)
 app.use(elixirHome()); // ElixirOffice start page; the test harness below stays at /?dev=1
+app.use(fileOperations.router());
 app.use(elixirNextcloud()); // ElixirOffice Nextcloud storage (/elixir/nc/*)
 
 app.get('/', (req, res) => { // define a handler for default page
@@ -226,6 +229,10 @@ app.get('/download', (req, res) => { // define a handler for downloading files
     }
   }
 
+  try {
+    const selected = fileOperations.bind(req, req.query.folder || '/', userAddress);
+    storagePaths.file(fileOperations.root(req, userAddress), selected.path, req.query.fileName);
+  } catch (e) { res.sendStatus(404); return; }
   // get the path to the force saved document version
   let filePath = req.DocManager.forcesavePath(fileName, userAddress, false);
   if (filePath === '') {
@@ -275,6 +282,8 @@ app.get('/history', (req, res) => {
 
   const { fileName } = req.query;
   const userAddress = req.query.useraddress;
+  try { fileOperations.bind(req, req.query.folder || '/', userAddress); }
+  catch (e) { res.sendStatus(404); return; }
   const { ver } = req.query;
   const { file } = req.query;
   let Path = '';
@@ -702,6 +711,8 @@ app.post('/reference', (req, res) => { // define a handler for renaming file
 });
 
 app.put('/restore', async (req, res) => { // define a handler for restore file version
+  try { fileOperations.bind(req, req.query.folder || '/'); }
+  catch (e) { res.sendStatus(404); return; }
   const { fileName, version, url } = req.body;
   const result = {};
   if (fileName) {
@@ -762,6 +773,8 @@ app.post('/track', async (req, res) => { // define a handler for tracking file c
 
   // track file changes
   const processTrack = async function processTrack(response, bodyTrack, fileNameTrack, userAddressTrack) {
+    try { fileNameTrack = fileOperations.track(req, bodyTrack.key, fileNameTrack, userAddressTrack); }
+    catch (error) { response.json({error:1,message:'Editing session is unavailable'});return; }
     // callback file saving process
     const callbackProcessSave = async function callbackProcessSave(
       downloadUri,
@@ -776,7 +789,7 @@ app.post('/track', async (req, res) => { // define a handler for tracking file c
           response.setHeader('Content-Type', 'application/json');
           response.write('{"error":1, "message":"file is not exist"}');
           response.end();
-          return;
+          return false;
         }
 
         const { status, data } = await urllib.request(downloadUri, { method: 'GET' });
@@ -838,12 +851,13 @@ app.post('/track', async (req, res) => { // define a handler for tracking file c
         response.setHeader('Content-Type', 'application/json');
         response.write(`{"error":1,"message":${JSON.stringify(ex)}}`);
         response.end();
-        return;
+        return false;
       }
 
       response.setHeader('Content-Type', 'application/json');
       response.write('{"error":0}');
       response.end();
+      return true;
     };
 
     // file saving process
@@ -866,25 +880,18 @@ app.post('/track', async (req, res) => { // define a handler for tracking file c
         // get the correct file name if it already exists
         newFileName = req.DocManager.getCorrectName(fileUtility.getFileName(fileName, true) + downloadExt, userAddress);
         try {
-          documentService.getConvertedUriSync(downloadUri, downloadExt, curExt, key, async (err, data) => {
-            if (err) {
-              await callbackProcessSave(downloadUri, body, fileName, userAddress, newFileName);
-              return;
-            }
-            try {
-              const resp = documentService.getResponseUri(data);
-              await callbackProcessSave(resp.uri, body, fileName, userAddress, fileName);
-            } catch (ex) {
-              console.log(ex);
-              await callbackProcessSave(downloadUri, body, fileName, userAddress, newFileName);
-            }
+          const converted = await new Promise((resolve) => {
+            documentService.getConvertedUriSync(downloadUri, downloadExt, curExt, key,
+              (err, data) => resolve({err, data}));
           });
-          return;
+          if (converted.err) return await callbackProcessSave(downloadUri, body, fileName, userAddress, newFileName);
+          const resp = documentService.getResponseUri(converted.data);
+          return await callbackProcessSave(resp.uri, body, fileName, userAddress, fileName);
         } catch (ex) {
           console.log(ex);
         }
       }
-      await callbackProcessSave(downloadUri, body, fileName, userAddress, newFileName);
+      return await callbackProcessSave(downloadUri, body, fileName, userAddress, newFileName);
     };
 
     // callback file force saving process
@@ -988,25 +995,18 @@ app.post('/track', async (req, res) => { // define a handler for tracking file c
       if (downloadExt !== curExt) {
         const key = documentService.generateRevisionId(downloadUri);
         try {
-          documentService.getConvertedUriSync(downloadUri, downloadExt, curExt, key, async (err, data) => {
-            if (err) {
-              await callbackProcessForceSave(downloadUri, body, fileName, userAddress, true);
-              return;
-            }
-            try {
-              const resp = documentService.getResponseUri(data);
-              await callbackProcessForceSave(resp.uri, body, fileName, userAddress, false);
-            } catch (ex) {
-              console.log(ex);
-              await callbackProcessForceSave(downloadUri, body, fileName, userAddress, true);
-            }
+          const converted = await new Promise((resolve) => {
+            documentService.getConvertedUriSync(downloadUri, downloadExt, curExt, key,
+              (err, data) => resolve({err, data}));
           });
-          return;
+          if (converted.err) return await callbackProcessForceSave(downloadUri, body, fileName, userAddress, true);
+          const resp = documentService.getResponseUri(converted.data);
+          return await callbackProcessForceSave(resp.uri, body, fileName, userAddress, false);
         } catch (ex) {
           console.log(ex);
         }
       }
-      await callbackProcessForceSave(downloadUri, body, fileName, userAddress, false);
+      return await callbackProcessForceSave(downloadUri, body, fileName, userAddress, false);
     };
 
     if (bodyTrack.status === 1) { // editing
@@ -1022,13 +1022,15 @@ app.post('/track', async (req, res) => { // define a handler for tracking file c
         }
       }
     } else if (bodyTrack.status === 2 || bodyTrack.status === 3) { // MustSave, Corrupted
-      await processSave(bodyTrack.url, bodyTrack, fileNameTrack, userAddressTrack); // save file
+      const saved = await processSave(bodyTrack.url, bodyTrack, fileNameTrack, userAddressTrack);
+      if (saved) fileOperations.close(bodyTrack.key);
       return;
     } else if (bodyTrack.status === 6 || bodyTrack.status === 7) { // MustForceSave, CorruptedForceSave
       await processForceSave(bodyTrack.url, bodyTrack, fileNameTrack, userAddressTrack); // force save file
       return;
     }
 
+    if (bodyTrack.status === 4) fileOperations.close(bodyTrack.key);
     response.setHeader('Content-Type', 'application/json');
     response.write('{"error":0}');
     response.end();
@@ -1042,7 +1044,7 @@ app.post('/track', async (req, res) => { // define a handler for tracking file c
     });
     request.on('end', async () => {
       const body = JSON.parse(content);
-      await processTrack(response, body, fileName, userAddress); // and track file changes
+      await fileOperations.run(body.key, () => processTrack(response, body, fileName, userAddress)); // and track file changes
     });
   };
 
@@ -1074,12 +1076,12 @@ app.post('/track', async (req, res) => { // define a handler for tracking file c
       res.end();
       return;
     }
-    await processTrack(res, body, fName, uAddress);
+    await fileOperations.run(body.key, () => processTrack(res, body, fName, uAddress));
     return;
   }
 
   if (Object.hasOwn(req.body, 'status')) { // if the request body has status parameter
-    await processTrack(res, req.body, fName, uAddress); // track file changes
+    await fileOperations.run(req.body.key, () => processTrack(res, req.body, fName, uAddress)); // track file changes
   } else {
     await readbody(req, res, fName, uAddress); // otherwise, read request body first
   }
@@ -1087,6 +1089,7 @@ app.post('/track', async (req, res) => { // define a handler for tracking file c
 
 app.get('/config', async (req, res) => {
   try {
+    fileOperations.bind(req, req.query.folder || '/');
     req.DocManager = new DocManager(req, res);
     const fileName = fileUtility.getFileName(req.query.fileName);
 
@@ -1138,6 +1141,7 @@ app.get('/config', async (req, res) => {
 // the document's title, key, download and callback URLs and backstage data.
 const renderEditor = (req, res, ext = null) => { // define a handler for editing document
   try {
+    if (!ext) fileOperations.bind(req, req.query.folder || '/');
     req.DocManager = new DocManager(req, res);
 
     let { fileExt } = req.query;
@@ -1300,6 +1304,7 @@ const renderEditor = (req, res, ext = null) => { // define a handler for editing
 
     // file config data
     const argss = {
+      fileOperationStrings: fileOperations.strings(req),
       appName,
       apiUrl: siteUrl + configServer.get('apiUrl'),
       file: {
@@ -1380,6 +1385,9 @@ const renderEditor = (req, res, ext = null) => { // define a handler for editing
       usersInfo,
     };
 
+    if (!ext && argss.editor.userid != null) {
+      argss.editor.elixir.storage = fileOperations.register(req, key, fileName, {canRename:userid!=='uid-3',canCopy:argss.editor.download});
+    }
     if (cfgSignatureEnable) {
       app.render('config', argss, (err, html) => { // render a config template with the parameters specified
         if (err) {
@@ -1421,27 +1429,23 @@ const renderEditor = (req, res, ext = null) => { // define a handler for editing
 app.get('/editor', (req, res) => renderEditor(req, res));
 elixirNextcloud.setRenderer(renderEditor);
 
-app.post('/rename', (req, res) => { // define a handler for renaming file
-  let { newfilename } = req.body;
-  const origExt = req.body.ext;
-  const curExt = fileUtility.getFileExtension(newfilename, true);
-  if (curExt !== origExt) {
-    newfilename += `.${origExt}`;
-  }
-
-  const { dockey } = req.body;
-  const meta = { title: newfilename };
-
-  const result = function result(err, data, ress) {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.write(JSON.stringify({ result: ress }));
-    res.end();
-  };
-
-  documentService.commandRequest('meta', dockey, result, meta);
-});
+app.post('/rename', fileOperations.handle(async (req, res) => {
+  fileOperations.csrf(req);
+  await fileOperations.run(req.body.dockey, async () => {
+    const e = fileOperations.entry(req, req.body.dockey, 'canRename');
+    const ext = path.extname(e.name), stem = storagePaths.name(req.body.newfilename);
+    const name = stem.toLowerCase().endsWith(ext.toLowerCase()) ? stem : stem + ext;
+    const moved = await storagePaths.rename(fileOperations.root(req, e.address), e.folder, e.name, name);
+    fileOperations.mutate(st => { st[req.body.dockey].name = moved.name; st[req.body.dockey].updated = Date.now(); });
+    // The stored name remains authoritative if meta delivery fails.
+    documentService.commandRequest('meta', req.body.dockey, () => {}, { title:moved.name });
+    res.json({ name:moved.name, folder:e.folder });
+  });
+}));
 
 app.post('/historyObj', (req, res) => {
+  try { fileOperations.bind(req, req.query.folder || '/'); }
+  catch (e) { res.sendStatus(404); return; }
   req.DocManager = new DocManager(req, res);
   const { fileName } = req.body;
   const { directUrl } = req.body || null;

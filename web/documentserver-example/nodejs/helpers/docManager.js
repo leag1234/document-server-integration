@@ -79,7 +79,7 @@ DocManager.prototype.getCustomParams = function getCustomParams() {
   const { type } = this.req.query; // type: embedded/mobile/desktop
   params += (type ? `&type=${type}` : '');
 
-  return params;
+  return params + require('./elixirFileOperations').suffix(this.req);
 };
 
 // get the correct file name if such a name already exists
@@ -253,7 +253,7 @@ DocManager.prototype.getCallback = function getCallback(fileName) {
   // get callback handler
   const handler = `/track?filename=${encodeURIComponent(fileName)}&useraddress=${encodeURIComponent(hostAddress)}`;
 
-  return server + handler;
+  return server + handler + require('./elixirFileOperations').suffix(this.req);
 };
 
 // get url to the created file
@@ -278,12 +278,15 @@ DocManager.prototype.getDownloadUrl = function getDownloadUrl(fileName, forDocum
     handler += `&useraddress=${encodeURIComponent(hostAddress)}`;
   }
 
-  return server + handler;
+  return server + handler + require('./elixirFileOperations').suffix(this.req);
 };
 
-DocManager.prototype.storageRootPath = function storageRootPath(userAddress) {
-  // get the path to the directory for the host address
+DocManager.prototype.userStorageRootPath = function userStorageRootPath(userAddress) {
   return path.join(storageConfigFolder, this.curUserHostAddress(userAddress));
+};
+DocManager.prototype.storageRootPath = function storageRootPath(userAddress) {
+  const folder=this.req.elixirStorageFolder;
+  return folder && folder.address===this.curUserHostAddress(userAddress) ? folder.root : this.userStorageRootPath(userAddress);
 };
 
 // get the storage path of the given file
@@ -457,7 +460,11 @@ DocManager.prototype.getTemplateImageUrl = function getTemplateImageUrl(fileType
 // get document key
 DocManager.prototype.getKey = function getKey(fileName, userAddress) {
   const address = userAddress || this.curUserHostAddress();
-  let key = address + fileName; // get document key by adding local file url to the current user host address
+  const operations = require('./elixirFileOperations');
+  const active = operations.activeKey(this.req, fileName, address);
+  if (active) return active;
+  const folder = this.req.elixirStorageFolder?.path;
+  let key = address + (folder && folder !== '/' ? folder + '/' : '') + fileName; // get document key by adding local file url to the current user host address
 
   const historyPath = this.historyPath(fileName, address); // get the path to the file history
   if (historyPath !== '') { // if the path to the file history exists
@@ -466,7 +473,7 @@ DocManager.prototype.getKey = function getKey(fileName, userAddress) {
 
   const storagePath = this.storagePath(fileName, address); // get the storage path to the given file
   const stat = fileSystem.statSync(storagePath); // get file information
-  key += stat.mtime.getTime(); // and add creation time to the document key
+  key += stat.mtime.getTime() + ':' + stat.dev + ':' + stat.ino; // and add creation time to the document key
 
   return documentService.generateRevisionId(key); // generate the document key value
 };
@@ -525,13 +532,13 @@ DocManager.prototype.getHistoryObject = function getHistoryObject(fileName, user
       history.push(this.getHistory(fileName, changes, keyVersion, i));
 
       const userUrl = i === countVersion ? directUrl : (`${this.getServerUrl(false)}/history?fileName=`
-        + `${encodeURIComponent(fileName)}&file=prev${fileExt}&ver=${i}`);
+        + `${encodeURIComponent(fileName)}&file=prev${fileExt}&ver=${i}` + require('./elixirFileOperations').suffix(this.req));
       const historyD = {
         fileType: fileExt.slice(1),
         version: i,
         key: keyVersion,
         url: i === countVersion ? url : (`${this.getServerUrl(true)}/history?fileName=`
-          + `${encodeURIComponent(fileName)}&file=prev${fileExt}&ver=${i}&useraddress=${userAddress}`),
+          + `${encodeURIComponent(fileName)}&file=prev${fileExt}&ver=${i}&useraddress=${userAddress}` + require('./elixirFileOperations').suffix(this.req)),
         directUrl: !userDirectUrl ? null : userUrl,
       };
 
@@ -544,7 +551,7 @@ DocManager.prototype.getHistoryObject = function getHistoryObject(fileName, user
           directUrl: !userDirectUrl ? null : historyData[i - 2].directUrl,
         };
         const changesUrl = `${this.getServerUrl(true)}/history?fileName=`
-          + `${encodeURIComponent(fileName)}&file=diff.zip&ver=${i - 1}&useraddress=${userAddress}`;
+          + `${encodeURIComponent(fileName)}&file=diff.zip&ver=${i - 1}&useraddress=${userAddress}` + require('./elixirFileOperations').suffix(this.req);
         historyD.changesUrl = changesUrl; // get the path to the diff.zip file and write it to the history object
       }
 

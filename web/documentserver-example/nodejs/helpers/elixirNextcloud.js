@@ -44,6 +44,7 @@ const config = require('config');
 const jwt = require('jsonwebtoken');
 const formidable = require('formidable');
 const { XMLParser } = require('fast-xml-parser');
+const documentService = require('./documentService');
 const DocManager = require('./docManager');
 const fileUtility = require('./fileUtility');
 const session = require('./elixirSession');
@@ -186,8 +187,11 @@ const parseMultistatus = (nc, xml) => {
       time: prop.getlastmodified ? Date.parse(prop.getlastmodified) || 0 : 0,
       etag: String(prop.getetag || ''),
       fileid: String(prop.fileid || ''),
+      canRename: perms.indexOf('N') >= 0,
       canWrite: perms.indexOf('W') >= 0 || (isDir && perms.indexOf('C') >= 0),
       canCreate: perms.indexOf('C') >= 0 || perms.indexOf('K') >= 0,
+      canUpload: perms.indexOf('C') >= 0,
+      canCreateFolder: perms.indexOf('K') >= 0,
     };
   }).filter(Boolean);
 };
@@ -319,7 +323,7 @@ const pruneState = (st) => {
 
 // key of the editing session of this file: the open session whose file version
 // (ETag) is the current one, else a new key for this version
-const documentKey = (nc, item, sessionHash) => {
+const documentKey = (nc, item, sessionHash, permissions) => {
   const st = pruneState(session.loadState(STATE));
   const ref = fileRef(nc, item.fileid);
   let key = Object.keys(st).find((k) => st[k].ref === ref && st[k].etag === item.etag);
@@ -328,6 +332,8 @@ const documentKey = (nc, item, sessionHash) => {
     st[key] = { ref, etag: item.etag, sessions: {}, server: nc.server, fileid: item.fileid };
   }
   st[key].sessions[sessionHash] = item.path;
+  st[key].grants = st[key].grants || {};
+  st[key].grants[sessionHash] = permissions;
   st[key].updated = Date.now();
   session.saveState(STATE, st);
   return { key, ref: key };
@@ -393,7 +399,7 @@ const saveBack = async (tok, body) => {
     if (s.nc && s.nc.appPassword && (!entry || s.nc.server === entry.server)) {
       nc = s.nc;
       sessionHash = h;
-      filePath = (entry && entry.sessions[h]) || (h === tok.s ? tok.p : null);
+      filePath = entry ? entry.sessions[h] : (h === tok.s ? tok.p : null);
       return !!filePath;
     }
     return false;
@@ -422,10 +428,31 @@ const saveBack = async (tok, body) => {
   }
 
   // the editing session now follows the saved file (or its conflict copy)
-  const st2 = session.loadState(STATE);
-  const e2 = st2[tok.r];
+  const currentItem = result.path !== filePath ? await stat(nc,result.path) : null;
+  const snapshot = session.loadState(STATE)[tok.r];
+  let aliases;
+  if (currentItem && snapshot) {
+    aliases = {};
+    for (const [h, oldPath] of Object.entries(snapshot.sessions)) {
+      const connection = session.load(h).nc;
+      if (!connection || connection.server !== nc.server || !connection.appPassword) continue;
+      const candidate = h === sessionHash ? result.path
+        : cleanPath((parentOf(oldPath) === '/' ? '' : parentOf(oldPath)) + '/' + baseName(result.path));
+      try {
+        if ((await stat(connection,candidate)).fileid === currentItem.fileid) aliases[h] = candidate;
+      } catch (unavailable) { /* This session cannot access the new copy. */ }
+    }
+  }
+  // Other documents can open/close while DAV alias lookups await network responses.
+  // Reload shared state after those awaits and merge only unchanged participants.
+  const st2 = session.loadState(STATE), e2 = st2[tok.r];
   if (e2) {
-    if (result.path !== filePath) Object.keys(e2.sessions).forEach((h) => { e2.sessions[h] = result.path; });
+    if (aliases) for (const [h, oldPath] of Object.entries(snapshot.sessions)) {
+      if (e2.sessions[h] !== oldPath) continue;
+      if (Object.hasOwn(aliases,h)) e2.sessions[h] = aliases[h];
+      else delete e2.sessions[h];
+    }
+    if(currentItem){e2.fileid=currentItem.fileid;e2.ref=fileRef(nc,currentItem.fileid)}
     e2.etag = result.etag || e2.etag;
     e2.updated = Date.now();
     session.saveState(STATE, st2);
@@ -443,12 +470,25 @@ const closeEntry = (ref) => {
 
 // ---------------------------------------------------------------- editor
 
+const withFile = (key, fn) => {
+  const entry = session.loadState(STATE)[key];
+  return require('./elixirFileOperations').run('nc-file:' + (entry ? entry.ref : key),
+    () => require('./elixirFileOperations').run(key,fn));
+};
+
 const ncEditorDoc = async (req, nc, p) => {
   const item = await stat(nc, p);
   if (item.type !== 'file') throw new NcError('notFound');
   const docManager = new DocManager(req, null);
   const dsBase = docManager.getServerUrl(true);
-  const { key, ref } = documentKey(nc, item, req.elixir.hash);
+  const home = homeLib(), appUser = require('./elixirIdentity').editorUser(req,
+    home.translator(home.resolveLanguage(req).ui),docManager.getServerUrl()).user;
+  const permissions = {canRename:appUser.id !== 'uid-3' && item.canRename,
+    canCopy:!appUser.deniedPermissions.includes('download')};
+  const {key,ref} = await require('./elixirFileOperations').run('nc-file:'+fileRef(nc,item.fileid),async()=>{
+    const current = await stat(nc,p);
+    return documentKey(nc,current,req.elixir.hash,permissions);
+  });
   const tok = { s: req.elixir.hash, p: item.path, r: ref, e: item.etag };
   let folder = parentOf(item.path);
   let host = nc.server;
@@ -477,6 +517,7 @@ const ncEditorDoc = async (req, nc, p) => {
       size: f.size,
     })),
     elixir: {
+      storage: {kind:'nc',key,name:item.name,label:host,folder:parentOf(item.path),...permissions},
       folder,
       uploadUrl: `${server}/elixir/nc/upload?folder=${encodeURIComponent(parentOf(item.path))}&csrf=${encodeURIComponent(csrf)}`,
       editorUrl: `${server}/elixir/nc/open?path={name}`,
@@ -662,7 +703,7 @@ module.exports = function elixirNextcloud() {
     const items = list.filter((f) => f.path !== p).map(itemJson)
       .sort((a, b) => (a.type === b.type ? a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }) : (a.type === 'dir' ? -1 : 1)));
     if (req.elixir.data().lastFolder !== p) req.elixir.update((data) => { data.lastFolder = p; }).catch(() => {});
-    res.json({ path: p, canCreate: self.canCreate !== false, items });
+    res.json({ path: p, canCreate: self.canCreate !== false, canUpload: self.canUpload === true, items });
   }));
 
   router.get('/elixir/nc/recent', handle(async (req, res) => {
@@ -690,6 +731,69 @@ module.exports = function elixirNextcloud() {
     Readable.fromWeb(r.body).pipe(res);
   }));
 
+  // File operations apply only to the authenticated browser's open document.
+  const operations = require('./elixirFileOperations');
+  const openEntry = (req, permission) => {
+    const nc = requireConnection(req), st = session.loadState(STATE), key = req.body.key;
+    const entry = typeof key === 'string' && Object.hasOwn(st,key) && st[key];
+    if (!entry || entry.server !== nc.server || !Object.hasOwn(entry.sessions,req.elixir.hash))
+      throw new NcError('notFound','Reopen this document',403);
+    if (permission && entry.grants?.[req.elixir.hash]?.[permission] !== true)
+      throw new NcError('forbidden','The file operation is unavailable for the current user',403);
+    return {nc,entry,path:entry.sessions[req.elixir.hash]};
+  };
+  router.post('/elixir/nc/rename', operations.handle(async (req,res) => {
+    operations.csrf(req);
+    await withFile(req.body.key, async () => {
+      const opened = openEntry(req,'canRename'), item = await stat(opened.nc,opened.path);
+      if (item.fileid !== opened.entry.fileid || item.etag !== opened.entry.etag) throw new NcError('conflict','The file changed in storage. Reopen it before renaming.',409);
+      if (!item.canRename) throw new NcError('forbidden','This file cannot be renamed',403);
+      const ext = fileUtility.getFileExtension(item.name), stem = require('./elixirStoragePaths').name(req.body.name);
+      const name = stem.toLowerCase().endsWith(ext.toLowerCase()) ? stem : stem+ext;
+      const destination = cleanPath((parentOf(item.path)==='/'?'':parentOf(item.path))+'/'+name);
+      if (destination !== item.path) {
+        const moved = await ncFetch(opened.nc,davUrl(opened.nc,item.path),{
+          method:'MOVE',headers:{Destination:davUrl(opened.nc,destination),Overwrite:'F','If-Match':item.etag}
+        });
+        if ([409,412].includes(moved.status)) throw new NcError('conflict','A file with this name already exists, or the file changed',409);
+        checkStatus(moved,'MOVE');
+      }
+      const updated = await stat(opened.nc,destination), before = session.loadState(STATE)[req.body.key], aliases = [];
+      // Folder shares can have different mount paths; single-file shares can retain an alias.
+      for (const [hash,current] of Object.entries(before.sessions)) {
+        const connection = session.load(hash).nc;
+        if (!connection || connection.server !== opened.nc.server || !connection.appPassword) continue;
+        let resolved = current;
+        try {
+          const existing = await stat(connection,current);
+          if (existing.fileid !== updated.fileid) continue;
+        } catch (error) {
+          if (error.status !== 404) continue;
+          const candidate = cleanPath((parentOf(current)==='/'?'':parentOf(current))+'/'+name);
+          try { if ((await stat(connection,candidate)).fileid === updated.fileid) resolved = candidate; }
+          catch (unavailable) { continue; }
+        }
+        aliases.push({hash,current,resolved});
+      }
+      const st = session.loadState(STATE), entry = st[req.body.key];
+      for (const alias of aliases) if (entry.sessions[alias.hash] === alias.current) entry.sessions[alias.hash] = alias.resolved;
+      entry.sessions[req.elixir.hash]=destination;
+      entry.etag=updated.etag;entry.updated=Date.now();session.saveState(STATE,st);
+      documentService.commandRequest('meta',req.body.key,()=>{},{title:name});
+      res.json({name,folder:parentOf(destination),path:destination});
+    });
+  }));
+  router.post('/elixir/nc/copy', operations.handle(async (req,res) => {
+    operations.csrf(req);openEntry(req,'canCopy');
+    const name = operations.copyName(req.body.name), folder = cleanPath(req.body.folder);
+    const bytes = await operations.convertedBytes(req,req.body.url,req.body.key);
+    const opened = openEntry(req,'canCopy'), targetFolder = await stat(opened.nc,folder);
+    if (targetFolder.type !== 'dir' || !targetFolder.canUpload) throw new NcError('forbidden','Choose a writable folder',403);
+    const p = cleanPath((folder==='/'?'':folder)+'/'+name), result = await put(opened.nc,p,bytes,{create:true});
+    if (result.conflict) throw new NcError('conflict','A file with this name already exists',409);
+    const editable=fileUtility.getFileExtension(name,true)!=='zip';
+    res.json({name,folder,path:p,editable,url:new DocManager(req,null).getServerUrl()+(editable?'/elixir/nc/open?path=':'/elixir/nc/file?path=')+encodeURIComponent(p)});
+  }));
   // ---- create and upload
   router.get('/elixir/nc/new', handle(async (req, res) => {
     checkCsrf(req);
@@ -783,12 +887,11 @@ module.exports = function elixirNextcloud() {
     if (body.status !== 1 && body.status !== 4) console.log(`[elixir/nc] track status ${body.status} ${body.key}`);
     try {
       if (body.status === 2 || body.status === 3) {
-        await saveBack(tok, body);
-        closeEntry(tok.r);
+        await withFile(tok.r,async()=>{await saveBack(tok, body);closeEntry(tok.r)});
       } else if (body.status === 6 || body.status === 7) {
-        await saveBack(tok, body);
+        await withFile(tok.r,()=>saveBack(tok, body));
       } else if (body.status === 4) {
-        closeEntry(tok.r);
+        await withFile(tok.r,()=>closeEntry(tok.r));
       }
       res.json({ error: 0 });
     } catch (err) {
