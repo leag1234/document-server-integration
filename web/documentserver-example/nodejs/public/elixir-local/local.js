@@ -5,7 +5,7 @@
 (function(){
  'use strict';
  var input=document.getElementById('file'),save=document.getElementById('save'),cancel=document.getElementById('cancel'),message=document.getElementById('message');
- var editor,controller,abort,file,workingName,opening=false;
+ var editor,controller,abort,file,workingName,pdfCopyWarning,opening=false,operationScope;
  var canonical={doc:'docx',rtf:'docx',txt:'docx',docm:'docx',dotx:'docx',xls:'xlsx',csv:'xlsx',xlsm:'xlsx',xltx:'xlsx',ppt:'pptx',ppsx:'pptx',potx:'pptx'};
  var kinds={pdf:'pdf',docx:'word',odt:'word',xlsx:'cell',ods:'cell',pptx:'slide',odp:'slide'};
  var exports={pdf:[513],word:[65,67,68,69,513],cell:[257,259,260,513],slide:[129,131,513]};
@@ -15,15 +15,15 @@
  function script(win,url){return new Promise(function(resolve,reject){var s=win.document.createElement('script');s.src=url;s.onload=resolve;s.onerror=function(){reject(new Error('Cannot load local editor assets'));};win.document.head.appendChild(s);});}
  function unsaved(){return controller&&(controller.hasPendingImages()||controller.isModified());}
  function download(bytes,name){var url=URL.createObjectURL(new Blob([bytes],{type:/\.pdf$/i.test(name||'')?'application/pdf':'application/octet-stream'})),a=document.createElement('a');a.href=url;a.download=name||file.name;a.click();setTimeout(function(){URL.revokeObjectURL(url);},1000);status('Saved locally. No document was uploaded.');}
+ function operationEvent(event){window.dispatchEvent(new CustomEvent('eo:local-operation',{detail:event}));}
  function downloadPdfCopy(bytes,name){
-  if(window.confirm('Export a PDF copy? This preview does not preserve bookmarks or document properties, and invalidates digital signatures. Your original stays unchanged.'))download(bytes,name);
-  else status('PDF export cancelled.');
+  if(!window.confirm(pdfCopyWarning)){status('PDF export cancelled.');return false;}download(bytes,name);return true;
  }
  async function open(selected){
   if(!selected||opening)return;input.value='';
   if(!/\.(docx|odt|rtf|txt|doc|dotx|docm|xlsx|ods|csv|xls|xltx|xlsm|pptx|odp|ppt|potx|ppsx|pdf)$/i.test(selected.name))throw new Error('Unsupported local document format');
   if(unsaved()&&!window.confirm('This local document has unsaved changes. Open another file and discard them?')){input.value='';return;}
-  opening=true;window.EOLocalFailure=null;window.EOLocalSession=null;file=selected;workingName=null;input.disabled=true;save.disabled=true;cancel.disabled=false;abort=new AbortController();
+  opening=true;operationScope=crypto.randomUUID();window.EOLocalFailure=null;window.EOLocalSession=null;file=selected;workingName=null;input.disabled=true;save.disabled=true;cancel.disabled=false;abort=new AbortController();
   if(controller)controller.dispose();controller=null;if(editor)editor.destroyEditor();
   var sourceFormat=file.name.split('.').pop().toLowerCase(),format=canonical[sourceFormat]||sourceFormat,kind=kinds[format];
   if(!kind){opening=false;input.disabled=false;cancel.disabled=true;throw new Error('Unsupported local document format');}
@@ -41,41 +41,60 @@
       if(!win.Common||!win.Common.ElixirLocal)await new Promise(function(resolve,reject){win.require(['common/main/lib/elixir-local/Controller'],resolve,reject);});
 
       var main=(kind==='word'?win.DE:kind==='cell'?win.SSE:kind==='pdf'?win.PDFE:win.PE).getController('Main');
-      win.Common.ElixirLocal.prepare(main.api,main,{downloadFormats:exports[kind]});
+      win.Common.ElixirLocal.prepare(main.api,main,{downloadFormats:exports[kind],saveAs:{
+       sourceFormat:sourceFormat,language:new URLSearchParams(location.search).get('lang')||'en',
+       getName:function(){return outputName(format).replace(/\.[^.]+$/,'');},
+       validateName:function(value,target){return !!win.Common.ElixirLocal.fileName(value,target);},
+       commitName:function(value,target){
+        var name=win.Common.ElixirLocal.fileName(value,target);
+        if(!name)return;
+        workingName=name.slice(0,-target.length-1)+'.'+format;
+        main.api.documentTitle=workingName;main.api.DocInfo&&main.api.DocInfo.put_Title(workingName);
+        var doc=main.document||main.appOptions.spreadsheet;if(doc)doc.title=workingName;
+        main.onDocumentName(workingName);
+        window.EOLocalSession.name=workingName;
+       },
+       getSignal:function(){return abort.signal;},onError:function(error){status(error.message);}
+      }});
       main.loadDocument({doc:{fileType:format,title:outputName(format),url:'_offline_',key:'local-'+crypto.randomUUID(),permissions:{edit:kind!=='pdf',comment:true,fillForms:true,download:true,print:true,chat:false}}});
-      controller=win.Common.ElixirLocal.install(main.api,{format:format,lang:new URLSearchParams(location.search).get('lang')||'en',getSignal:function(){return abort.signal;},onSave:function(bytes){download(bytes,outputName(format));},
+      controller=win.Common.ElixirLocal.install(main.api,{format:format,lang:new URLSearchParams(location.search).get('lang')||'en',operationScope:operationScope,onOperation:operationEvent,getSignal:function(){return abort.signal;},onSave:function(bytes){download(bytes,outputName(format));return {kind:'download-started',name:outputName(format),bytes:bytes.length};},
        buildPdf:win.EOLocalPdf,onExport:function(bytes,target,options,stats){
         if(options.isPdfPrint){
          var url=win.URL.createObjectURL(new win.Blob([bytes],{type:'application/pdf'}));
          main.api.sendEvent('asc_onPrintUrl',url);
          setTimeout(function(){win.URL.revokeObjectURL(url);},60*1000);
          status('Printing locally. No document was uploaded.');
-        }else if(kind==='pdf')downloadPdfCopy(bytes,outputName(target));
+        }else if(kind==='pdf'){if(!downloadPdfCopy(bytes,outputName(target)))return {kind:'cancelled'};}
         else download(bytes,outputName(target));
         window.EOLocalLastExport={format:target,printed:!!options.isPdfPrint,bytes:bytes.length,stats:stats};
+        return {kind:options.isPdfPrint?'print-started':'download-started',name:outputName(target),bytes:bytes.length};
        },onBeforeSave:function(){abort=new AbortController();save.disabled=true;input.disabled=true;cancel.disabled=false;},onAfterSave:function(){save.disabled=!!controller.canSave&&!controller.canSave();input.disabled=false;cancel.disabled=true;},onError:function(e){status(e.message);},onProgress:function(p){status('Local conversion: '+p.stage);}});
       if(sourceFormat!==format){
        status('Opening a converted copy as .'+format+'…');
        bytes=await win.EOWasmConvert.convert(new win.Uint8Array(bytes),sourceFormat,format,{signal:abort.signal,onProgress:function(p){status('Local conversion: '+p.stage);}});
       }
       var stats=await controller.open(bytes);
-      window.EOLocalSession={controller:controller,format:format,sourceFormat:sourceFormat,converted:sourceFormat!==format,stats:stats};
-      if(kind!=='pdf'){
-      var bs=(win.DE||win.SSE||win.PE).getController('ElixirChrome').backstage,enhance=bs.enhanceSaveAs;
-      bs.enhanceSaveAs=function(){
-       enhance.call(this);var panel=bs.fm.panels&&bs.fm.panels.saveas;
-       if(!panel||panel.$el.find('[data-local-rename]').length)return;
-       var button=win.$('<button type="button" data-local-rename/>').text('Rename downloaded copy');
-       button.on('click',function(){
-        var value=window.prompt('Name for downloaded copies. The original file stays unchanged.',outputName(format).replace(/\.[^.]+$/,''));
-        if(value===null)return;
-        value=value.normalize('NFC');var leaf=value.trim(),candidate=leaf.toLowerCase().endsWith('.'+format)?leaf:leaf+'.'+format;
-        if(!value.trim()||/[\x00-\x1f\x7f\\/:*?"<>|\u202a-\u202e\u2066-\u2069]/.test(value)||/[. ]$/.test(value)||value.trim()==='.'||value.trim()==='..'||value.length>200||/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(leaf.split('.')[0].replace(/ +$/,''))||new TextEncoder().encode(candidate).length>255){status('Choose a valid file name');return}
-        workingName=value.trim();if(!workingName.toLowerCase().endsWith('.'+format))workingName+='.'+format;main.api.documentTitle=workingName;main.api.DocInfo&&main.api.DocInfo.put_Title(workingName);var doc=main.document||main.appOptions.spreadsheet;if(doc)doc.title=workingName;main.onDocumentName(workingName);bs.fm.loadDocument({doc:main.document||main.appOptions.spreadsheet});status('Downloaded copies use '+workingName+'. The original file stays unchanged.');
-        window.EOLocalSession.name=workingName;
-       });panel.$el.find('.elx-page-inner').prepend(button);
-      };bs.enhanceSaveAs();
+      if(kind==='pdf'){
+       // The PDF launcher reuses the selector without changing its hosted menu.
+       var fm=win.PDFE.getController('LeftMenu').leftMenu.menuFile;
+       var bs=Object.create(win.Common.Views.ElixirBackstage.prototype);
+       bs.controller=main;bs.fm=fm;bs.mode=fm.mode||main.appOptions;bs.defaultFileType='pdf';
+       bs.formats=function(){return [{type:win.Asc.c_oAscFileType.PDF,ext:'.pdf',name:'txtFmtPdf',desc:'txtFmtPdfDesc',group:'pdf'}];};
+       var language=(new URLSearchParams(location.search).get('lang')||'en').toLowerCase();
+       if(!/^[a-z]{2}(?:-[a-z]{2,4})?$/.test(language))language='en';
+       var localeUrl='/example/local-assets/web-apps/apps/documenteditor/main/locale/';
+       var response=await win.fetch(localeUrl+language+'.json');
+       if(!response.ok)response=await win.fetch(localeUrl+'en.json');
+       var labels=await response.json();
+       ['txtSaveAs','txtSaveFormat','txtSaveName','txtSaveNameInvalid','txtFmtPdf','txtFmtPdfDesc','txtPdfCopyWarning'].forEach(function(key){
+        bs[key]=labels['DE.Views.ElixirBackstage.'+key];
+       });
+       bs.afterApplyMode=function(){bs.mode=fm.mode||main.appOptions;bs.enhanceSaveAs();};
+       bs.patchFileMenu();
+       var render=fm.render;fm.render=function(){var result=render.apply(this,arguments);bs.afterApplyMode();return result;};
+       bs.afterApplyMode();pdfCopyWarning=bs.txtPdfCopyWarning;
       }
+      window.EOLocalSession={controller:controller,format:format,sourceFormat:sourceFormat,converted:sourceFormat!==format,stats:stats};
       save.disabled=kind==='pdf'&&!controller.canSave();status(kind==='pdf'&&!controller.canSave()?controller.readOnlyMessage():sourceFormat!==format?'Editing a converted copy. Download saves .'+format+'; the original stays unchanged.':'Editing locally. Documents stay on this computer.');resolve();
      }catch(e){reject(e);}
     },onError:function(e){reject(new Error(e.data&&e.data.errorDescription||'Editor could not open locally'));}}
