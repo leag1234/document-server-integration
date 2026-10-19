@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="<%= lang.ui %>">
+<html lang="<%= lang.ui %>" dir="<%= ['ar', 'he', 'ur'].includes(lang.ui.toLowerCase().split('-')[0]) ? 'rtl' : 'ltr' %>">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="color-scheme" content="light" />
+    <meta name="color-scheme" content="light dark" />
     <!--
     *
     * (c) Copyright ElixirOffice contributors 2026
@@ -28,6 +28,7 @@
     <% if (hasFavicon) { %><link rel="icon" href="elixir/brand/favicon.svg" type="image/svg+xml" /><% } %>
     <link rel="manifest" href="elixir/brand/manifest.webmanifest" />
     <meta name="theme-color" content="#0082c9" />
+    <script src="elixir/home-theme.js"></script>
     <link rel="stylesheet" href="elixir/home.css" />
 </head>
 <%
@@ -241,9 +242,9 @@
         <div class="acct-head">
             <%- avatar('avatar-lg') %>
             <div class="acct-id">
-                <div class="acct-name" id="acct-name"><%= account.name %></div>
-                <div class="acct-sub"><%= nc.connected ? (account.email || account.login || '') : t('account.localProfile') %></div>
-                <% if (nc.connected) { %><div class="acct-sub acct-server"><svg class="ic-xs" aria-hidden="true"><use href="#i-cloud"/></svg><span><%= account.serverHost %></span></div><% } %>
+                <div class="acct-name" id="acct-name" dir="auto"><%= account.name %></div>
+                <div class="acct-sub" dir="auto"><%= nc.connected ? (account.email || account.login || '') : t('account.localProfile') %></div>
+                <% if (nc.connected) { %><div class="acct-sub acct-server"><svg class="ic-xs" aria-hidden="true"><use href="#i-cloud"/></svg><span dir="ltr"><%= account.serverHost %></span></div><% } %>
             </div>
         </div>
         <div class="acct-actions">
@@ -290,7 +291,7 @@
             <div class="connect-step" id="connect-step-server">
                 <p><%= t('nc.dialog.body') %></p>
                 <label class="field-label" for="connect-server"><%= t('nc.dialog.server') %></label>
-                <input class="field" type="url" id="connect-server" name="server" autocomplete="url" spellcheck="false"
+                <input class="field" type="url" id="connect-server" name="server" dir="ltr" autocomplete="url" spellcheck="false"
                     value="<%= nc.defaultServer %>" placeholder="https://cloud.example.org" required />
                 <p class="field-hint"><%= t('nc.dialog.hint') %></p>
                 <p class="field-error" id="connect-error" role="alert" hidden></p>
@@ -314,7 +315,7 @@
             <h2 id="profile-title"><%= t('profile.title') %></h2>
             <p><%= t('profile.body') %></p>
             <label class="field-label" for="profile-name"><%= t('profile.name') %></label>
-            <input class="field" type="text" id="profile-name" maxlength="80" autocomplete="name"
+            <input class="field" type="text" id="profile-name" dir="auto" maxlength="80" autocomplete="name"
                 value="<%= account.named ? account.name : '' %>" placeholder="<%= t('profile.defaultName') %>" />
             <div class="dialog-actions">
                 <button class="btn btn-primary" value="ok"><%= t('profile.save') %></button>

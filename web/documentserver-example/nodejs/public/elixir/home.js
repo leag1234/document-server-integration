@@ -39,7 +39,7 @@
   var t = function (key, vars) {
     var text = strings[key] || key;
     if (vars) {
-      Object.keys(vars).forEach(function (k) { text = text.split('{' + k + '}').join(vars[k]); });
+      Object.keys(vars).forEach(function (k) { text = text.split('{' + k + '}').join('\u2068' + vars[k] + '\u2069'); });
     }
     return text;
   };
@@ -189,6 +189,7 @@
       a.href = f.url;
       if (f.kind === 'file') a.target = '_blank';
       a.className = 'file-link';
+      a.dir = 'auto';
       var dot = f.kind === 'file' ? f.name.lastIndexOf('.') : -1;
       var base = document.createElement('span');
       base.className = 'file-base';
@@ -202,6 +203,7 @@
       if (f.source === 'nc' && state.view !== 'cloud' && f.path) {
         var where = document.createElement('span');
         where.className = 'file-where';
+        where.dir = 'auto';
         var parent = f.path.slice(0, f.path.lastIndexOf('/')) || '/';
         where.textContent = parent === '/' ? serverHost : serverHost + parent;
         tdName.appendChild(where);
@@ -221,7 +223,10 @@
 
       var tdSize = document.createElement('td');
       tdSize.className = 'c-size';
-      tdSize.textContent = f.kind === 'dir' ? '' : formatSize(f.size);
+      var size = document.createElement('bdi');
+      size.dir = 'ltr';
+      size.textContent = f.kind === 'dir' ? '' : formatSize(f.size);
+      tdSize.appendChild(size);
       tr.appendChild(tdSize);
 
       var tdAct = document.createElement('td');
@@ -327,6 +332,7 @@
     var add = function (label, p, last) {
       var b = document.createElement(last ? 'span' : 'button');
       b.className = 'crumb';
+      b.dir = 'auto';
       b.textContent = label;
       if (last) b.setAttribute('aria-current', 'location');
       else { b.type = 'button'; b.dataset.path = p; }
@@ -499,7 +505,8 @@
     var top = r.bottom + 4;
     if (top + mh > window.innerHeight - 8) top = r.top - mh - 4;
     m.style.top = Math.max(8, top) + 'px';
-    m.style.left = Math.max(8, Math.min(r.right - mw, window.innerWidth - mw - 8)) + 'px';
+    var edge = getComputedStyle(m).direction === 'rtl' ? r.left : r.right - mw;
+    m.style.left = Math.max(8, Math.min(edge, window.innerWidth - mw - 8)) + 'px';
     var first = m.querySelector('button:not([hidden])');
     if (first) first.focus();
   };
